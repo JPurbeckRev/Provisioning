@@ -8,114 +8,142 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3452;
-      --accent: #4f7eff; --text: #e8eaf6; --muted: #7b82a8;
+      --accent: #4f7eff; --accent-glow: rgba(79,126,255,0.12);
+      --text: #e8eaf6; --muted: #7b82a8;
       --success: #3dd68c; --warn: #ffb938; --error: #ff5f72;
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow: hidden; }
 
     /* ── Topnav ────────────────────────────── */
-    .topnav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 52px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 14px; }
-    .topnav-title { font-size: 1.1rem; font-weight: 700; }
+    .topnav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 48px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 14px; gap: 12px; }
+    .topnav-title { font-size: 1rem; font-weight: 700; }
     .topnav-title span { color: var(--accent); }
-    .topnav-right { margin-left: auto; font-size: 0.8rem; color: var(--muted); }
-
-    .hamburger { background: none; border: none; cursor: pointer; padding: 6px; display: flex; flex-direction: column; gap: 5px; border-radius: 6px; }
+    .topnav-right { margin-left: auto; font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 12px; }
+    .hamburger { background: none; border: none; cursor: pointer; padding: 6px; display: flex; flex-direction: column; gap: 4px; border-radius: 6px; }
     .hamburger:hover { background: var(--surface2); }
-    .hamburger span { display: block; width: 22px; height: 2px; background: var(--text); border-radius: 2px; transition: transform 0.2s, opacity 0.2s; }
-    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger span { display: block; width: 20px; height: 2px; background: var(--text); border-radius: 2px; }
+    .hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
     .hamburger.open span:nth-child(2) { opacity: 0; }
-    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
+    .hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
     .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; }
     .drawer-overlay.open { display: block; }
     .drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: var(--surface); border-right: 1px solid var(--border); z-index: 400; transform: translateX(-100%); transition: transform 0.22s; display: flex; flex-direction: column; }
     .drawer.open { transform: translateX(0); }
-    .drawer-header { padding: 18px 20px 14px; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--border); }
-    .drawer-nav { display: flex; flex-direction: column; padding: 10px 0; }
-    .drawer-item { display: flex; align-items: center; padding: 12px 20px; gap: 10px; color: var(--text); text-decoration: none; font-size: 0.92rem; border-left: 3px solid transparent; transition: background 0.12s; }
+    .drawer-header { padding: 16px 18px 12px; font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--border); }
+    .drawer-nav { display: flex; flex-direction: column; padding: 8px 0; }
+    .drawer-item { display: flex; align-items: center; padding: 10px 18px; gap: 10px; color: var(--text); text-decoration: none; font-size: 0.88rem; border-left: 3px solid transparent; }
     .drawer-item:hover { background: var(--surface2); }
     .drawer-item.active { border-left-color: var(--accent); color: var(--accent); background: var(--surface2); }
 
-    /* ── Layout ────────────────────────────── */
-    .app { display: flex; margin-top: 52px; height: calc(100vh - 52px); }
+    /* ── App layout ────────────────────────── */
+    .app { display: flex; margin-top: 48px; height: calc(100vh - 48px); }
 
     /* ── Sidebar ───────────────────────────── */
-    .sidebar { width: 320px; min-width: 280px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface); }
-    .sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border); }
-    .sidebar-stats { display: flex; gap: 12px; margin-bottom: 10px; font-size: 0.75rem; }
-    .stat-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; }
-    .stat-badge strong { color: var(--accent); }
-    .sidebar-filters { display: flex; gap: 6px; flex-wrap: wrap; }
-    .sidebar-filters input, .sidebar-filters select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 6px; font-size: 0.8rem; outline: none; }
-    .sidebar-filters input { flex: 1; min-width: 100px; }
-    .sidebar-filters select { width: auto; }
-    .sidebar-filters label { font-size: 0.75rem; color: var(--muted); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    .sidebar { width: 300px; min-width: 260px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface); }
+    .sidebar-top { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+    .sidebar-stats { display: flex; gap: 8px; font-size: 0.7rem; flex-wrap: wrap; }
+    .stat { background: var(--bg); border-radius: 5px; padding: 3px 7px; }
+    .stat b { color: var(--accent); }
+    .filter-row { display: flex; gap: 6px; }
+    .filter-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 5px; font-size: 0.78rem; outline: none; }
+    .filter-row input:focus { border-color: var(--accent); }
+    .filter-row select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 6px; border-radius: 5px; font-size: 0.78rem; outline: none; }
+    .filter-checks { display: flex; gap: 10px; }
+    .filter-checks label { font-size: 0.72rem; color: var(--muted); display: flex; align-items: center; gap: 3px; cursor: pointer; }
 
     .run-list { flex: 1; overflow-y: auto; }
-    .run-item { padding: 10px 14px; border-bottom: 1px solid rgba(46,52,82,0.4); cursor: pointer; transition: background 0.12s; display: flex; gap: 10px; align-items: flex-start; }
-    .run-item:hover { background: var(--surface2); }
-    .run-item.active { background: rgba(79,126,255,0.1); border-left: 3px solid var(--accent); }
-    .run-item.feedback { opacity: 0.6; font-style: italic; }
-    .run-indicator { font-size: 0.85rem; flex-shrink: 0; width: 20px; text-align: center; }
-    .run-info { flex: 1; min-width: 0; }
-    .run-plate { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .run-meta { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
-    .run-model { font-size: 0.65rem; background: var(--surface2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; color: var(--muted); display: inline-block; margin-top: 3px; }
+    .run-item { padding: 8px 12px; border-bottom: 1px solid rgba(46,52,82,0.3); cursor: pointer; transition: background 0.1s; display: flex; gap: 8px; align-items: center; }
+    .run-item:hover { background: rgba(79,126,255,0.05); }
+    .run-item.active { background: var(--accent-glow); border-left: 3px solid var(--accent); }
+    .run-item.is-feedback { opacity: 0.5; }
+    .ri-status { width: 20px; flex-shrink: 0; text-align: center; font-size: 0.8rem; }
+    .ri-body { flex: 1; min-width: 0; }
+    .ri-plate { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ri-line2 { font-size: 0.68rem; color: var(--muted); margin-top: 1px; display: flex; gap: 6px; align-items: center; }
+    .ri-model { font-size: 0.6rem; background: var(--bg); padding: 1px 4px; border-radius: 3px; }
+    .ri-conf { font-size: 0.6rem; padding: 1px 5px; border-radius: 3px; font-weight: 700; }
+    .ri-conf.high { background: rgba(61,214,140,0.12); color: var(--success); }
+    .ri-conf.mid { background: rgba(255,185,56,0.12); color: var(--warn); }
+    .ri-conf.low { background: rgba(255,95,114,0.12); color: var(--error); }
+    .ri-disc { font-size: 0.6rem; color: var(--warn); }
 
     /* ── Main panel ────────────────────────── */
-    .main { flex: 1; overflow-y: auto; padding: 24px; }
-    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80%; color: var(--muted); gap: 8px; }
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .main-scroll { flex: 1; overflow-y: auto; padding: 20px 24px 100px; }
+
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--muted); gap: 6px; }
     .empty-state .icon { font-size: 2.5rem; }
 
-    .review-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-    .review-header h2 { font-size: 1.2rem; font-weight: 700; }
-    .review-actions { display: flex; gap: 8px; margin-left: auto; }
-    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 7px; border: none; cursor: pointer; font-size: 0.82rem; font-weight: 600; transition: opacity 0.15s; }
-    .btn:hover { opacity: 0.85; }
+    /* ── Run header ────────────────────────── */
+    .run-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .run-header h2 { font-size: 1.3rem; font-weight: 800; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 1px; }
+    .run-header .meta { font-size: 0.82rem; color: var(--muted); }
+    .nav-btns { margin-left: auto; display: flex; gap: 4px; }
+    .nav-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; transition: background 0.12s; }
+    .nav-btn:hover { background: var(--accent-glow); border-color: var(--accent); }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ── Alert boxes ───────────────────────── */
+    .alert { border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.82rem; display: flex; align-items: flex-start; gap: 8px; }
+    .alert-gt { background: rgba(61,214,140,0.08); border: 1px solid var(--success); color: var(--success); }
+    .alert-feedback { background: rgba(255,185,56,0.06); border: 1px solid var(--warn); }
+    .alert-feedback .alert-title { color: var(--warn); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; }
+    .alert-feedback .alert-body { color: var(--text); margin-top: 2px; }
+    .alert-disc { background: rgba(79,126,255,0.05); border: 1px solid var(--border); }
+    .disc-item { display: inline-flex; align-items: center; gap: 4px; background: var(--bg); border-radius: 4px; padding: 2px 7px; margin: 2px; font-size: 0.72rem; }
+    .disc-item .from { color: var(--error); text-decoration: line-through; opacity: 0.7; }
+    .disc-item .to { color: var(--success); font-weight: 600; }
+    .disc-item .ft { color: var(--muted); font-size: 0.62rem; }
+
+    /* ── Field sections ────────────────────── */
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; }
+    .section-head { padding: 8px 14px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); background: rgba(79,126,255,0.05); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; }
+    .section-head .sec-badge { font-size: 0.6rem; background: var(--warn); color: #000; padding: 1px 5px; border-radius: 3px; font-weight: 700; }
+    .field-row { display: flex; flex-wrap: wrap; }
+    .field { padding: 8px 14px; border-bottom: 1px solid rgba(46,52,82,0.25); border-left: 3px solid transparent; flex: 1; min-width: 160px; transition: border-color 0.15s, background 0.15s; }
+    .field.changed { border-left-color: var(--warn); background: rgba(255,185,56,0.04); }
+    .field.disc-field { border-left-color: var(--accent); background: rgba(79,126,255,0.04); }
+    .field .flabel { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); margin-bottom: 3px; display: flex; align-items: center; gap: 4px; }
+    .field .flabel .low-conf { color: var(--error); font-size: 0.6rem; }
+    .field input, .field select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px 7px; border-radius: 5px; font-size: 0.82rem; outline: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .field input:focus, .field select:focus { border-color: var(--accent); }
+    .field .orig { font-size: 0.62rem; color: var(--muted); margin-top: 2px; display: none; }
+    .field.changed .orig { display: block; }
+
+    /* ── Sticky action bar ─────────────────── */
+    .action-bar { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 10px 24px; display: flex; align-items: center; gap: 10px; z-index: 10; }
+    .action-bar .hint { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+    .action-bar kbd { background: var(--bg); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; font-size: 0.68rem; font-family: ui-monospace, monospace; }
+    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: opacity 0.12s, transform 0.08s; }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.97); }
     .btn-primary { background: var(--accent); color: #fff; }
     .btn-success { background: var(--success); color: #000; }
     .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
     .btn-ghost:hover { color: var(--text); }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
-    .section-title { padding: 10px 16px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); background: var(--surface2); border-bottom: 1px solid var(--border); }
-    .field-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0; }
-    .field { padding: 10px 16px; border-bottom: 1px solid rgba(46,52,82,0.3); border-left: 3px solid transparent; transition: border-color 0.2s; }
-    .field.changed { border-left-color: var(--warn); background: rgba(255,185,56,0.04); }
-    .field label { display: block; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 4px; }
-    .field input, .field select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 6px; font-size: 0.85rem; outline: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .field input:focus, .field select:focus { border-color: var(--accent); }
-    .field .orig-val { font-size: 0.68rem; color: var(--muted); margin-top: 3px; font-style: italic; display: none; }
-    .field.changed .orig-val { display: block; }
+    .toast { position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%); background: var(--success); color: #000; padding: 8px 20px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; z-index: 50; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+    .toast.show { opacity: 1; }
 
-    .verification-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
-    .verification-box h3 { font-size: 0.8rem; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
-    .disc-row { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; font-size: 0.82rem; }
-    .disc-field { font-weight: 600; color: var(--warn); min-width: 100px; }
-    .disc-before { color: var(--error); text-decoration: line-through; opacity: 0.7; }
-    .disc-after { color: var(--success); font-weight: 600; }
-    .disc-type { font-size: 0.65rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; color: var(--muted); }
-
-    .feedback-box { background: rgba(255,185,56,0.06); border: 1px solid var(--warn); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
-    .feedback-box h3 { font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; color: var(--warn); }
-    .feedback-box p { font-size: 0.85rem; }
-
-    .raw-toggle { font-size: 0.8rem; color: var(--muted); cursor: pointer; margin-top: 8px; }
+    .raw-toggle { font-size: 0.78rem; color: var(--muted); cursor: pointer; margin-top: 8px; }
     .raw-toggle:hover { color: var(--text); }
-    pre.raw-json { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 0.75rem; overflow-x: auto; margin-top: 8px; display: none; max-height: 400px; }
+    pre.raw-json { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 0.7rem; overflow-x: auto; margin-top: 6px; display: none; max-height: 350px; }
 
     @media (max-width: 768px) {
-      .sidebar { width: 100%; min-width: 0; max-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
+      .sidebar { width: 100%; min-width: 0; max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
       .app { flex-direction: column; }
+      .action-bar { padding: 8px 12px; }
     }
   </style>
 </head>
 <body>
   <nav class="topnav">
     <button class="hamburger" id="hamburger-btn" aria-label="Menu"><span></span><span></span><span></span></button>
-    <span class="topnav-title">Plate<span>z</span></span>
-    <span class="topnav-right" id="topnav-stats"></span>
+    <span class="topnav-title">Plate<span>z</span> Review</span>
+    <span class="topnav-right">
+      <span id="topnav-stats"></span>
+    </span>
   </nav>
 
   <div class="drawer-overlay" id="drawer-overlay"></div>
@@ -127,30 +155,46 @@
       <a class="drawer-item" href="admin.html">🏷 Plate Type Admin</a>
       <a class="drawer-item" href="pipeline.html">📋 Pipeline Docs</a>
       <a class="drawer-item active" href="review.html">🔬 Run Review</a>
+      <a class="drawer-item" href="benchmark.html">📊 Benchmark</a>
     </nav>
   </aside>
 
   <div class="app">
     <div class="sidebar">
-      <div class="sidebar-header">
+      <div class="sidebar-top">
         <div class="sidebar-stats" id="stats-bar"></div>
-        <div class="sidebar-filters">
-          <input type="text" id="filter-plate" placeholder="Filter by plate…" />
-          <select id="filter-provider"><option value="">All providers</option><option value="lmstudio">LM Studio</option><option value="gemini">Gemini</option></select>
-          <label><input type="checkbox" id="filter-unlabeled" /> Unlabeled only</label>
+        <div class="filter-row">
+          <input type="text" id="filter-plate" placeholder="Search plates…" />
+          <select id="filter-provider"><option value="">All</option><option value="lmstudio">🖥️ LM</option><option value="gemini">✨ Gem</option></select>
+        </div>
+        <div class="filter-checks">
+          <label><input type="checkbox" id="filter-unlabeled" /> Unlabeled</label>
+          <label><input type="checkbox" id="filter-has-disc" /> Has discordance</label>
         </div>
       </div>
       <div class="run-list" id="run-list"></div>
     </div>
-    <div class="main" id="main-panel">
-      <div class="empty-state" id="empty-state">
-        <div class="icon">🔬</div>
-        <p>Select a run to review</p>
-        <p style="font-size:0.8rem;">Correct fields, mark as ground truth</p>
+    <div class="main">
+      <div class="main-scroll" id="main-scroll">
+        <div class="empty-state" id="empty-state">
+          <div class="icon">🔬</div>
+          <p>Select a run to review</p>
+          <p style="font-size:0.78rem;color:var(--muted)">Use ↑↓ to navigate · Enter for ground truth</p>
+        </div>
+        <div id="review-content" style="display:none;"></div>
       </div>
-      <div id="review-content" style="display:none;"></div>
+      <div class="action-bar" id="action-bar" style="display:none;">
+        <button class="btn btn-ghost" onclick="resetFields()" id="reset-btn">↺ Reset</button>
+        <button class="btn btn-primary" onclick="saveCorrections(false)" id="save-btn" disabled>Save</button>
+        <button class="btn btn-success" onclick="saveCorrections(true)" id="gt-btn">✅ Ground Truth</button>
+        <span class="hint">
+          <kbd>↑</kbd><kbd>↓</kbd> navigate · <kbd>Enter</kbd> ground truth · <kbd>Esc</kbd> reset
+        </span>
+      </div>
     </div>
   </div>
+
+  <div class="toast" id="toast"></div>
 
   <script>
     // ── Config ────────────────────────────────
@@ -158,8 +202,10 @@
     const API = isRemote ? '/Platez' : '';
 
     // ── State ─────────────────────────────────
-    let allRuns = [];       // { filename, data } for all runs
-    let allFeedback = [];   // { filename, data } for feedback entries
+    let allRuns = [];
+    let allFeedback = [];
+    let filteredRuns = [];
+    let selectedIdx = -1;
     let selectedRun = null;
     let originalData = null;
 
@@ -172,107 +218,100 @@
     function openDrawer() { drawer.classList.add('open'); drawerOverlay.classList.add('open'); hamburgerBtn.classList.add('open'); }
     function closeDrawer() { drawer.classList.remove('open'); drawerOverlay.classList.remove('open'); hamburgerBtn.classList.remove('open'); }
 
-    // ── Load all runs ─────────────────────────
-    async function loadAllRuns() {
+    // ── Load ──────────────────────────────────
+    async function loadAll() {
       const res = await fetch(`${API}/logs`);
       const files = await res.json();
-
-      const runs = [];
-      const feedback = [];
-
-      // Fetch all files in parallel (batched)
-      const batchSize = 20;
+      const allData = [];
+      const batchSize = 25;
       for (let i = 0; i < files.length; i += batchSize) {
         const batch = files.slice(i, i + batchSize);
         const results = await Promise.allSettled(
-          batch.map(async f => {
-            const r = await fetch(`${API}/logs/${f}`);
-            return { filename: f, data: await r.json() };
-          })
+          batch.map(async f => { const r = await fetch(`${API}/logs/${f}`); return { filename: f, data: await r.json() }; })
         );
-        results.forEach(r => {
-          if (r.status === 'fulfilled') {
-            if (r.value.data._type === 'feedback') feedback.push(r.value);
-            else runs.push(r.value);
-          }
-        });
+        results.forEach(r => { if (r.status === 'fulfilled') allData.push(r.value); });
       }
-
-      allRuns = runs;
-      allFeedback = feedback;
+      allRuns = allData.filter(d => !d.data._type || d.data._type === 'run' || d.data._type === 'ground_truth');
+      allFeedback = allData.filter(d => d.data._type === 'feedback');
       renderStats();
-      renderRunList();
+      applyFilters();
     }
 
-    // ── Relative time ─────────────────────────
     function relTime(ts) {
-      const d = new Date(ts);
-      const diff = (Date.now() - d.getTime()) / 1000;
-      if (diff < 60) return 'just now';
-      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-      return Math.floor(diff / 86400) + 'd ago';
+      const diff = (Date.now() - new Date(ts).getTime()) / 1000;
+      if (diff < 60) return 'now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+      return Math.floor(diff / 86400) + 'd';
     }
 
-    // ── Stats ─────────────────────────────────
     function renderStats() {
-      const total = allRuns.length;
-      const gt = allRuns.filter(r => r.data.ground_truth).length;
-      // Failure type breakdown
-      const ftCounts = {};
-      allRuns.forEach(r => {
-        (r.data._verification?.discordance || []).forEach(d => {
-          const ft = d.failure_type || 'other';
-          ftCounts[ft] = (ftCounts[ft] || 0) + 1;
-        });
-      });
-
-      const statsBar = document.getElementById('stats-bar');
-      statsBar.innerHTML = `
-        <span class="stat-badge"><strong>${total}</strong> runs</span>
-        <span class="stat-badge"><strong>${gt}</strong> labeled</span>
-        <span class="stat-badge"><strong>${allFeedback.length}</strong> feedback</span>
-      `;
+      const total = allRuns.filter(r => !r.data._type || r.data._type !== 'ground_truth').length;
+      const gt = allRuns.filter(r => r.data.ground_truth || r.data._type === 'ground_truth').length;
+      document.getElementById('stats-bar').innerHTML =
+        `<span class="stat"><b>${total}</b> runs</span><span class="stat"><b>${gt}</b> labeled</span><span class="stat"><b>${allFeedback.length}</b> feedback</span>`;
       document.getElementById('topnav-stats').textContent = `${gt}/${total} labeled`;
     }
 
-    // ── Run list ──────────────────────────────
-    function renderRunList() {
-      const plateFilter = document.getElementById('filter-plate').value.toLowerCase();
-      const provFilter = document.getElementById('filter-provider').value;
-      const unlabeledOnly = document.getElementById('filter-unlabeled').checked;
+    // ── Filters ───────────────────────────────
+    function applyFilters() {
+      const plateQ = document.getElementById('filter-plate').value.toLowerCase();
+      const provQ = document.getElementById('filter-provider').value;
+      const unlabeled = document.getElementById('filter-unlabeled').checked;
+      const hasDisc = document.getElementById('filter-has-disc').checked;
 
-      const filtered = allRuns.filter(r => {
+      filteredRuns = allRuns.filter(r => {
         const d = r.data;
-        if (plateFilter && !(d.plate_number || '').toLowerCase().includes(plateFilter)) return false;
-        if (provFilter && d._provider !== provFilter) return false;
-        if (unlabeledOnly && d.ground_truth) return false;
+        if (d._type === 'feedback') return false;
+        if (plateQ && !(d.plate_number || '').toLowerCase().includes(plateQ)) return false;
+        if (provQ && d._provider !== provQ) return false;
+        if (unlabeled && (d.ground_truth || d._type === 'ground_truth')) return false;
+        if (hasDisc && !(d._verification?.discordance?.length > 0)) return false;
         return true;
       });
+      renderRunList();
+    }
 
+    ['filter-plate', 'filter-provider', 'filter-unlabeled', 'filter-has-disc'].forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', applyFilters);
+      if (el.tagName === 'SELECT') el.addEventListener('change', applyFilters);
+    });
+
+    // ── Run list ──────────────────────────────
+    function renderRunList() {
       const list = document.getElementById('run-list');
-      list.innerHTML = filtered.map((r, i) => {
+      list.innerHTML = filteredRuns.map((r, i) => {
         const d = r.data;
         const plate = d.plate_number_formatted || d.plate_number || '?';
-        const state = d.state || '?';
-        const time = relTime(d._timestamp);
-        const model = d._model ? (d._model.includes('/') ? d._model.split('/').pop() : d._model) : '?';
-        const provIcon = d._provider === 'gemini' ? '✨' : '🖥️';
-        const indicator = d.ground_truth ? '✅' : (getFeedbackForRun(r) ? '⚠️' : '');
-        const active = selectedRun && selectedRun.filename === r.filename ? 'active' : '';
-        return `<div class="run-item ${active}" data-idx="${i}" onclick="selectRun('${r.filename}')">
-          <div class="run-indicator">${indicator}</div>
-          <div class="run-info">
-            <div class="run-plate">${esc(plate)}</div>
-            <div class="run-meta">${esc(state)} · ${time}</div>
-            <div class="run-model">${provIcon} ${esc(model)}</div>
+        const conf = d.confidence?.plate_number;
+        const confClass = conf == null ? '' : conf >= 0.9 ? 'high' : conf >= 0.7 ? 'mid' : 'low';
+        const confText = conf != null ? Math.round(conf * 100) + '%' : '';
+        const discCount = d._verification?.discordance?.length || 0;
+        const isGT = d.ground_truth || d._type === 'ground_truth';
+        const hasFB = getFeedbackForRun(r);
+        const status = isGT ? '✅' : hasFB ? '⚠️' : '';
+        const model = d._model ? (d._model.includes('/') ? d._model.split('/').pop() : d._model) : '';
+        const short = model.length > 16 ? model.slice(0, 14) + '…' : model;
+        const active = i === selectedIdx ? 'active' : '';
+        return `<div class="run-item ${active}" data-idx="${i}" onclick="selectByIdx(${i})">
+          <div class="ri-status">${status}</div>
+          <div class="ri-body">
+            <div class="ri-plate">${esc(plate)}</div>
+            <div class="ri-line2">
+              <span>${esc(d.state || '?')}</span>
+              <span style="color:var(--border)">·</span>
+              <span>${relTime(d._timestamp)}</span>
+              ${short ? `<span class="ri-model">${esc(short)}</span>` : ''}
+              ${confText ? `<span class="ri-conf ${confClass}">${confText}</span>` : ''}
+              ${discCount > 0 ? `<span class="ri-disc">${discCount} disc</span>` : ''}
+            </div>
           </div>
         </div>`;
       }).join('');
     }
 
     function getFeedbackForRun(run) {
-      // Match feedback by timestamp proximity or plate number
       const ts = run.data._timestamp;
       return allFeedback.find(f => {
         const rt = f.data.run?._timestamp;
@@ -281,208 +320,197 @@
       });
     }
 
-    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-
-    // ── Filters ───────────────────────────────
-    document.getElementById('filter-plate').addEventListener('input', renderRunList);
-    document.getElementById('filter-provider').addEventListener('change', renderRunList);
-    document.getElementById('filter-unlabeled').addEventListener('change', renderRunList);
-
-    // ── Select run ────────────────────────────
-    function selectRun(filename) {
-      const run = allRuns.find(r => r.filename === filename);
-      if (!run) return;
+    // ── Selection ─────────────────────────────
+    function selectByIdx(idx) {
+      if (idx < 0 || idx >= filteredRuns.length) return;
+      selectedIdx = idx;
+      const run = filteredRuns[idx];
       selectedRun = run;
       originalData = JSON.parse(JSON.stringify(run.data));
-      renderRunList(); // update active state
+      renderRunList();
       renderReview(run);
+      // Scroll sidebar item into view
+      const item = document.querySelector(`.run-item[data-idx="${idx}"]`);
+      if (item) item.scrollIntoView({ block: 'nearest' });
     }
 
-    // ── Field definitions ─────────────────────
+    // ── Keyboard nav ──────────────────────────
+    document.addEventListener('keydown', e => {
+      // Don't hijack when typing in inputs
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+        if (e.key === 'Escape') e.target.blur();
+        return;
+      }
+      if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault();
+        selectByIdx(Math.min(selectedIdx + 1, filteredRuns.length - 1));
+      } else if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault();
+        selectByIdx(Math.max(selectedIdx - 1, 0));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedRun) saveCorrections(true);
+      } else if (e.key === 'Escape') {
+        resetFields();
+      }
+    });
+
+    // ── Field defs ────────────────────────────
     const SECTIONS = [
-      { title: 'Plate Identity', fields: [
-        { key: 'plate_number', label: 'Plate Number', type: 'text' },
+      { id: 'identity', icon: '🔤', title: 'Plate Identity', fields: [
+        { key: 'plate_number', label: 'Plate Number', type: 'text', primary: true },
         { key: 'plate_number_formatted', label: 'Formatted', type: 'text' },
         { key: 'separators', label: 'Separators', type: 'text', isArray: true },
-        { key: 'separator_source', label: 'Sep. Source', type: 'select', options: ['', 'assigned', 'design', 'mixed'] },
-        { key: 'spacing_notes', label: 'Spacing Notes', type: 'text' },
+        { key: 'separator_source', label: 'Sep Source', type: 'select', options: ['', 'assigned', 'design', 'mixed'] },
       ]},
-      { title: 'Location & Design', fields: [
-        { key: 'state', label: 'State', type: 'text' },
-        { key: 'design_type', label: 'Design Type', type: 'text' },
+      { id: 'design', icon: '🏷', title: 'Location & Design', fields: [
+        { key: 'state', label: 'State', type: 'text', primary: true },
+        { key: 'design_type', label: 'Design Type', type: 'text', primary: true },
         { key: 'design.variant_hint', label: 'Variant Hint', type: 'text', nested: true },
       ]},
-      { title: 'Expiration', fields: [
+      { id: 'expiration', icon: '📅', title: 'Expiration', fields: [
         { key: 'expiration_month', label: 'Month', type: 'number', min: 1, max: 12 },
         { key: 'expiration_year', label: 'Year', type: 'number', min: 2000, max: 2040 },
         { key: 'expiration_sticker_color', label: 'Sticker Color', type: 'text' },
       ]},
-      { title: 'Disabled', fields: [
+      { id: 'disabled', icon: '♿', title: 'Disabled', fields: [
         { key: 'is_disabled', label: 'Is Disabled', type: 'checkbox' },
-        { key: 'dp_logo_position', label: 'Logo Position', type: 'select', options: ['none', 'left', 'right'] },
+        { key: 'dp_logo_position', label: 'Logo Pos', type: 'select', options: ['none', 'left', 'right'] },
         { key: 'vertical_text', label: 'Vertical Text', type: 'text' },
-        { key: 'vertical_text_position', label: 'VT Position', type: 'select', options: ['', 'left', 'right'] },
+        { key: 'vertical_text_position', label: 'VT Pos', type: 'select', options: ['', 'left', 'right'] },
         { key: 'disabled_type', label: 'Disabled Type', type: 'text' },
       ]},
-      { title: 'Meta', fields: [
-        { key: 'potentially_truncated', label: 'Truncated', type: 'checkbox' },
-        { key: 'symbols_in_lpn', label: 'Symbols in LPN', type: 'text', isArray: true },
-      ]},
-      { title: 'Confidence', fields: [
-        { key: 'confidence.plate_number', label: 'Plate Number', type: 'number', min: 0, max: 1, step: 0.01, nested: true },
-        { key: 'confidence.expiration_month', label: 'Exp. Month', type: 'number', min: 0, max: 1, step: 0.01, nested: true },
-        { key: 'confidence.expiration_year', label: 'Exp. Year', type: 'number', min: 0, max: 1, step: 0.01, nested: true },
-        { key: 'confidence.vertical_text', label: 'Vertical Text', type: 'number', min: 0, max: 1, step: 0.01, nested: true },
+      { id: 'confidence', icon: '📊', title: 'Confidence', fields: [
+        { key: 'confidence.plate_number', label: 'Plate #', type: 'number', min: 0, max: 1, step: 0.01, nested: true },
+        { key: 'confidence.expiration_month', label: 'Exp Month', type: 'number', min: 0, max: 1, step: 0.01, nested: true },
+        { key: 'confidence.expiration_year', label: 'Exp Year', type: 'number', min: 0, max: 1, step: 0.01, nested: true },
+        { key: 'confidence.vertical_text', label: 'Vert Text', type: 'number', min: 0, max: 1, step: 0.01, nested: true },
       ]},
     ];
 
     function getVal(data, key) {
-      if (key.includes('.')) {
-        const parts = key.split('.');
-        let v = data;
-        for (const p of parts) v = v?.[p];
-        return v;
-      }
+      if (key.includes('.')) { const p = key.split('.'); let v = data; for (const k of p) v = v?.[k]; return v; }
       return data[key];
     }
-
     function setVal(data, key, val) {
       if (key.includes('.')) {
-        const parts = key.split('.');
-        let obj = data;
-        for (let i = 0; i < parts.length - 1; i++) {
-          if (!obj[parts[i]]) obj[parts[i]] = {};
-          obj = obj[parts[i]];
-        }
-        obj[parts[parts.length - 1]] = val;
-      } else {
-        data[key] = val;
-      }
+        const p = key.split('.'); let o = data;
+        for (let i = 0; i < p.length - 1; i++) { if (!o[p[i]]) o[p[i]] = {}; o = o[p[i]]; }
+        o[p[p.length - 1]] = val;
+      } else { data[key] = val; }
     }
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
     // ── Render review ─────────────────────────
     function renderReview(run) {
       document.getElementById('empty-state').style.display = 'none';
-      const content = document.getElementById('review-content');
-      content.style.display = 'block';
+      document.getElementById('action-bar').style.display = 'flex';
+      const el = document.getElementById('review-content');
+      el.style.display = 'block';
 
       const d = run.data;
+      const disc = d._verification?.discordance || [];
+      const discFields = new Set(disc.map(dd => dd.field));
       const feedback = getFeedbackForRun(run);
 
-      let html = `<div class="review-header">
+      let html = '';
+
+      // Header with nav
+      const prevDisabled = selectedIdx <= 0 ? 'disabled' : '';
+      const nextDisabled = selectedIdx >= filteredRuns.length - 1 ? 'disabled' : '';
+      html += `<div class="run-header">
         <h2>${esc(d.plate_number_formatted || d.plate_number || '?')}</h2>
-        <span style="color:var(--muted);font-size:0.85rem;">${esc(d.state || '?')} · ${d._provider || '?'} · ${relTime(d._timestamp)}</span>
-        <div class="review-actions">
-          <button class="btn btn-ghost" onclick="resetFields()">↺ Reset</button>
-          <button class="btn btn-primary" onclick="saveCorrections(false)" id="save-btn">Save Corrections</button>
-          <button class="btn btn-success" onclick="saveCorrections(true)" id="gt-btn">✅ Mark Ground Truth</button>
+        <span class="meta">${esc(d.state || '?')} · ${d._provider === 'gemini' ? '✨' : '🖥️'} ${esc((d._model || '?').split('/').pop())} · ${relTime(d._timestamp)}</span>
+        <div class="nav-btns">
+          <button class="nav-btn" onclick="selectByIdx(${selectedIdx - 1})" ${prevDisabled}>← Prev</button>
+          <span style="color:var(--muted);font-size:0.75rem;padding:0 4px;">${selectedIdx + 1}/${filteredRuns.length}</span>
+          <button class="nav-btn" onclick="selectByIdx(${selectedIdx + 1})" ${nextDisabled}>Next →</button>
         </div>
       </div>`;
 
-      if (d.ground_truth) {
-        html += `<div style="background:rgba(61,214,140,0.08);border:1px solid var(--success);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:0.85rem;color:var(--success);">✅ This run is marked as ground truth</div>`;
+      // Alerts
+      if (d.ground_truth || d._type === 'ground_truth') {
+        html += `<div class="alert alert-gt">✅ Marked as ground truth</div>`;
       }
-
       if (feedback) {
-        html += `<div class="feedback-box"><h3>⚠️ User Feedback</h3><p>${esc(feedback.data.feedback)}</p></div>`;
+        html += `<div class="alert alert-feedback"><div><div class="alert-title">⚠️ User Feedback</div><div class="alert-body">${esc(feedback.data.feedback)}</div></div></div>`;
       }
-
-      // Verification discordance
-      const disc = d._verification?.discordance;
-      if (disc && disc.length > 0) {
-        html += `<div class="verification-box"><h3>⚖️ Verification Discordance</h3>`;
+      if (disc.length > 0) {
+        html += `<div class="alert alert-disc"><div style="flex:1;"><div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:4px;">⚖️ ${disc.length} Verification Change${disc.length > 1 ? 's' : ''}</div><div style="display:flex;flex-wrap:wrap;gap:2px;">`;
         disc.forEach(dd => {
-          const bef = dd.before === null ? '—' : String(dd.before);
-          const aft = dd.after === null ? '—' : String(dd.after);
-          html += `<div class="disc-row">
-            <span class="disc-field">${esc(dd.field)}</span>
-            <span class="disc-before">${esc(bef)}</span>
-            <span style="color:var(--muted)">→</span>
-            <span class="disc-after">${esc(aft)}</span>
-            ${dd.failure_type ? `<span class="disc-type">${esc(dd.failure_type)}</span>` : ''}
-          </div>`;
+          const b = dd.before == null ? '∅' : String(dd.before);
+          const a = dd.after == null ? '∅' : String(dd.after);
+          html += `<span class="disc-item"><b style="color:var(--accent);margin-right:2px;">${esc(dd.field.replace('_',' '))}</b> <span class="from">${esc(b)}</span> → <span class="to">${esc(a)}</span>${dd.failure_type ? ` <span class="ft">${esc(dd.failure_type)}</span>` : ''}</span>`;
         });
-        html += `</div>`;
+        html += `</div></div></div>`;
       }
 
-      // Editable sections
+      // Field sections
       SECTIONS.forEach(sec => {
-        html += `<div class="section"><div class="section-title">${sec.title}</div><div class="field-grid">`;
+        const secDiscCount = sec.fields.filter(f => discFields.has(f.key)).length;
+        html += `<div class="section"><div class="section-head">${sec.icon} ${sec.title}${secDiscCount > 0 ? ` <span class="sec-badge">${secDiscCount} changed</span>` : ''}</div><div class="field-row">`;
+
         sec.fields.forEach(f => {
           const val = getVal(d, f.key);
           const origVal = getVal(originalData, f.key);
-          const dispVal = val === null || val === undefined ? '' : (f.isArray ? JSON.stringify(val) : val);
-          const origDisp = origVal === null || origVal === undefined ? '' : (f.isArray ? JSON.stringify(origVal) : origVal);
-          const fieldId = `field-${f.key.replace(/\./g, '-')}`;
+          const dispVal = val == null ? '' : (f.isArray ? JSON.stringify(val) : val);
+          const origDisp = origVal == null ? '' : (f.isArray ? JSON.stringify(origVal) : origVal);
+          const fid = `f-${f.key.replace(/\./g, '-')}`;
+          const isDisc = discFields.has(f.key);
+          const confKey = f.key.startsWith('confidence.') ? null : `confidence.${f.key}`;
+          const confVal = confKey ? getVal(d, confKey) : null;
+          const lowConf = confVal != null && confVal < 0.7;
+
+          let cls = isDisc ? 'disc-field' : '';
+
+          html += `<div class="field ${cls}" id="w-${fid}">`;
+          html += `<div class="flabel">${f.label}${lowConf ? ` <span class="low-conf">⚠ ${Math.round(confVal*100)}%</span>` : ''}</div>`;
 
           if (f.type === 'checkbox') {
-            html += `<div class="field" id="wrap-${fieldId}">
-              <label>${f.label}</label>
-              <input type="checkbox" id="${fieldId}" ${val ? 'checked' : ''} onchange="onFieldChange('${f.key}', this.checked)" style="width:auto;" />
-              <div class="orig-val">was: ${origDisp}</div>
-            </div>`;
+            html += `<input type="checkbox" id="${fid}" ${val ? 'checked' : ''} onchange="onFieldChange('${f.key}',this.checked)" style="width:auto;" />`;
           } else if (f.type === 'select') {
-            html += `<div class="field" id="wrap-${fieldId}">
-              <label>${f.label}</label>
-              <select id="${fieldId}" onchange="onFieldChange('${f.key}', this.value || null)">
-                ${f.options.map(o => `<option value="${o}" ${String(val) === o || (!val && !o) ? 'selected' : ''}>${o || '—'}</option>`).join('')}
-              </select>
-              <div class="orig-val">was: ${esc(String(origDisp || '—'))}</div>
-            </div>`;
+            html += `<select id="${fid}" onchange="onFieldChange('${f.key}',this.value||null)">${f.options.map(o => `<option value="${o}" ${String(val||'') === o ? 'selected' : ''}>${o || '—'}</option>`).join('')}</select>`;
           } else {
-            html += `<div class="field" id="wrap-${fieldId}">
-              <label>${f.label}</label>
-              <input type="${f.type}" id="${fieldId}" value="${esc(String(dispVal))}"
-                ${f.min !== undefined ? `min="${f.min}"` : ''} ${f.max !== undefined ? `max="${f.max}"` : ''} ${f.step ? `step="${f.step}"` : ''}
-                oninput="onFieldChange('${f.key}', this.value, '${f.type}', ${!!f.isArray})" />
-              <div class="orig-val">was: ${esc(String(origDisp || '—'))}</div>
-            </div>`;
+            html += `<input type="${f.type}" id="${fid}" value="${esc(String(dispVal))}" ${f.min!=null?`min="${f.min}"`:''} ${f.max!=null?`max="${f.max}"`:''} ${f.step?`step="${f.step}"`:''} oninput="onFieldChange('${f.key}',this.value,'${f.type}',${!!f.isArray})" />`;
           }
+          html += `<div class="orig">was: ${esc(String(origDisp || '—'))}</div>`;
+          html += `</div>`;
         });
         html += `</div></div>`;
       });
 
-      // Raw JSON toggle
-      html += `<div class="raw-toggle" onclick="toggleRaw()">Show raw JSON</div>`;
-      html += `<pre class="raw-json" id="raw-json">${esc(JSON.stringify(d, null, 2))}</pre>`;
+      html += `<div class="raw-toggle" onclick="document.getElementById('rj').style.display=document.getElementById('rj').style.display==='none'?'block':'none'">Show raw JSON</div>`;
+      html += `<pre class="raw-json" id="rj">${esc(JSON.stringify(d, null, 2))}</pre>`;
 
-      content.innerHTML = html;
+      el.innerHTML = html;
+      document.getElementById('main-scroll').scrollTop = 0;
+      updateButtons();
     }
 
-    function toggleRaw() {
-      const el = document.getElementById('raw-json');
-      el.style.display = el.style.display === 'none' ? 'block' : 'none';
-    }
-
-    // ── Field change tracking ─────────────────
+    // ── Field changes ─────────────────────────
     function onFieldChange(key, value, type, isArray) {
       if (!selectedRun) return;
-
-      // Parse value
       let parsed = value;
       if (type === 'number' && value !== '') parsed = parseFloat(value);
       if (type === 'number' && value === '') parsed = null;
       if (typeof value === 'string' && value === '') parsed = null;
-      if (isArray) {
-        try { parsed = JSON.parse(value); } catch { parsed = value.split(',').map(s => s.trim()).filter(Boolean); }
-      }
-
+      if (isArray) { try { parsed = JSON.parse(value); } catch { parsed = value.split(',').map(s => s.trim()).filter(Boolean); } }
       setVal(selectedRun.data, key, parsed);
 
-      // Highlight changed fields
-      const fieldId = `wrap-field-${key.replace(/\./g, '-')}`;
-      const wrap = document.getElementById(fieldId);
+      const fid = `w-f-${key.replace(/\./g, '-')}`;
+      const wrap = document.getElementById(fid);
       const origVal = getVal(originalData, key);
       const newVal = getVal(selectedRun.data, key);
       const changed = JSON.stringify(origVal ?? null) !== JSON.stringify(newVal ?? null);
-      if (wrap) wrap.classList.toggle('changed', changed);
-
-      // Update save buttons
+      if (wrap) {
+        wrap.classList.toggle('changed', changed);
+        if (!changed) wrap.classList.remove('disc-field'); // remove disc highlight if reverted
+      }
       updateButtons();
     }
 
     function updateButtons() {
-      const hasChanges = JSON.stringify(selectedRun?.data) !== JSON.stringify(originalData);
+      const hasChanges = selectedRun && JSON.stringify(selectedRun.data) !== JSON.stringify(originalData);
       const saveBtn = document.getElementById('save-btn');
       if (saveBtn) saveBtn.disabled = !hasChanges;
     }
@@ -494,18 +522,17 @@
     }
 
     // ── Save ──────────────────────────────────
-    async function saveCorrections(asGroundTruth) {
+    async function saveCorrections(asGT) {
       if (!selectedRun) return;
-
       const entry = {
         ...selectedRun.data,
-        _type: asGroundTruth ? 'ground_truth' : 'correction',
+        _type: asGT ? 'ground_truth' : 'correction',
         _corrected_at: new Date().toISOString(),
         _original_file: selectedRun.filename,
       };
-      if (asGroundTruth) entry.ground_truth = true;
+      if (asGT) entry.ground_truth = true;
 
-      // Compute changed fields
+      // Compute changes
       const changes = [];
       SECTIONS.forEach(sec => sec.fields.forEach(f => {
         const o = JSON.stringify(getVal(originalData, f.key) ?? null);
@@ -515,33 +542,27 @@
       entry._corrections = changes;
 
       try {
-        const logUrl = `${API}/log`;
-        await fetch(logUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(entry)
-        });
-
-        // Update local state
-        if (asGroundTruth) selectedRun.data.ground_truth = true;
+        await fetch(`${API}/log`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entry) });
+        if (asGT) selectedRun.data.ground_truth = true;
         originalData = JSON.parse(JSON.stringify(selectedRun.data));
+        renderStats();
         renderRunList();
         renderReview(selectedRun);
-
-        // Flash success
-        const btn = asGroundTruth ? document.getElementById('gt-btn') : document.getElementById('save-btn');
-        if (btn) {
-          const orig = btn.textContent;
-          btn.textContent = '✓ Saved';
-          setTimeout(() => { btn.textContent = orig; }, 1500);
-        }
+        showToast(asGT ? '✅ Marked as ground truth' : '💾 Corrections saved');
       } catch (e) {
-        alert('Save failed: ' + e.message);
+        showToast('❌ Save failed: ' + e.message);
       }
     }
 
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
     // ── Init ──────────────────────────────────
-    loadAllRuns();
+    loadAll();
   </script>
 </body>
 </html>
