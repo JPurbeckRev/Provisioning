@@ -84,6 +84,41 @@ http.createServer((req, res) => {
     return;
   }
 
+  // GET /logs — list all run/feedback JSON files (newest first)
+  if (req.method === 'GET' && req.url === '/logs') {
+    try {
+      const files = fs.readdirSync(LOG_DIR)
+        .filter(f => f.endsWith('.json'))
+        .sort((a, b) => b.localeCompare(a)); // newest first (ISO timestamp in filename)
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS });
+      res.end(JSON.stringify(files));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json', ...CORS });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /logs/<filename> — return a specific log file
+  if (req.method === 'GET' && req.url.startsWith('/logs/')) {
+    const filename = path.basename(req.url.slice(6));
+    if (!filename.endsWith('.json') || filename.includes('..')) {
+      res.writeHead(400, { 'Content-Type': 'application/json', ...CORS });
+      res.end(JSON.stringify({ error: 'Invalid filename' }));
+      return;
+    }
+    const filePath = path.join(LOG_DIR, filename);
+    try {
+      const data = fs.readFileSync(filePath, 'utf8');
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS });
+      res.end(data);
+    } catch (e) {
+      res.writeHead(404, { 'Content-Type': 'application/json', ...CORS });
+      res.end(JSON.stringify({ error: 'Not found' }));
+    }
+    return;
+  }
+
   // Proxy /api/* → LM Studio
   if (req.url.startsWith('/api/')) {
     const target = LM_STUDIO + req.url.slice(4); // strip /api prefix
