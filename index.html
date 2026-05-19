@@ -1310,6 +1310,22 @@
       }
 
       const data = await res.json();
+
+      // PLZ-04: Log token usage and warn if approaching context limits
+      const usage = data.usage;
+      if (usage) {
+        const promptTok = usage.prompt_tokens || 0;
+        const completionTok = usage.completion_tokens || 0;
+        const totalTok = usage.total_tokens || (promptTok + completionTok);
+        console.log(`[Platez] Tokens: prompt=${promptTok} completion=${completionTok} total=${totalTok}`);
+        // Warn if prompt tokens exceed 80% of a 4096 context window (LM Studio default)
+        if (provider !== 'gemini' && promptTok > 3276) {
+          console.warn(`[Platez] ⚠️ Context pressure: prompt tokens (${promptTok}) exceed 80% of 4096. Consider increasing LM Studio context window.`);
+        }
+        // Store usage on the return value for logging
+        data._tokenUsage = { prompt: promptTok, completion: completionTok, total: totalTok };
+      }
+
       const raw = data.choices?.[0]?.message?.content?.trim();
       if (!raw) throw new Error('Model returned an empty response. It may not support vision input.');
 
@@ -1326,7 +1342,7 @@
       // Strip trailing commas before } or ] (invalid JSON but common model output)
       jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1');
       try {
-        return { parsed: JSON.parse(jsonStr), jsonStr };
+        return { parsed: JSON.parse(jsonStr), jsonStr, tokenUsage: data._tokenUsage || null };
       } catch {
         // Show full raw response for diagnosis (no truncation)
         throw new Error(`Could not parse model response as JSON (${raw.length} chars, finish_reason=${data.choices?.[0]?.finish_reason}):\n\n${raw}`);
@@ -1353,6 +1369,9 @@
       document.getElementById('main-card').classList.remove('has-results');
       statusMsg.innerHTML = '<div class="status-step active" id="st-1">1 Reading plate…</div><div class="status-step" id="st-2">2 Reading stickers…</div><div class="status-step" id="st-3">3 Classifying design…</div><div class="status-step" id="st-4">4 Reading edge text…</div><div class="status-step" id="st-5">5 Verifying analysis…</div>';
       statusMsg.style.display = 'block';
+
+      // PLZ-04: Track cumulative token usage across all passes
+      const tokenTracker = { total_prompt: 0, total_completion: 0, total: 0, passes: [] };
 
       // Abort controller — cancel button + 90s hard timeout
       activeAbort = new AbortController();
@@ -1489,7 +1508,14 @@ Output ONLY valid JSON (no markdown, no code fences):
 }`
 
       try {
-        let { parsed: data, jsonStr } = await callModel(prompt1, modelId, apiBase, { signal: activeAbort?.signal });
+        let result1 = await callModel(prompt1, modelId, apiBase, { signal: activeAbort?.signal });
+        let { parsed: data, jsonStr } = result1;
+        if (result1.tokenUsage) {
+          tokenTracker.passes.push({ pass: 1, ...result1.tokenUsage });
+          tokenTracker.total_prompt += result1.tokenUsage.prompt || 0;
+          tokenTracker.total_completion += result1.tokenUsage.completion || 0;
+          tokenTracker.total += result1.tokenUsage.total || 0;
+        }
         data = postProcess(data);
         
         let needSecondPass = false;
@@ -1809,7 +1835,12 @@ Reply ONLY with JSON:
   "vertical_text_position": "<confirmed or corrected or null>",
   "potentially_truncated": <confirmed or corrected>,
   "corrections_made": ["<list each field that was changed, or empty array if none>"],
-  "confidence": { "plate_number": <0.0-1.0> }
+  "confidence": {
+    "plate_number": <0.0-1.0>,
+    "expiration_month": <0.0-1.0 or null>,
+    "expiration_year": <0.0-1.0 or null>,
+    "vertical_text": <0.0-1.0 or null>
+  }
 }`;
           const { parsed: vData } = await callModel(verifyPrompt, modelId, apiBase, { signal: activeAbort?.signal });
 
@@ -1819,13 +1850,40 @@ Reply ONLY with JSON:
             console.log('[Platez] Verification corrections:', corrections);
           }
 
-          // Apply verified values with protection: verification can CORRECT but not ERASE.
-          // If the first pass found a non-null value, the verify pass can change it to a
-          // different non-null value but cannot null it out (that's almost always regression).
+          // Apply verified values with protection: verification can CORRECT but not ERASE,
+          // UNLESS it has high confidence that the original value was wrong.
+          // PLZ-03: Allow null-outs when verify confidence ≥ 0.85 AND original confidence ≤ 0.6
+          const nullOutLog = [];
+
+          // Map fields to their confidence keys
+          const CONF_KEY_MAP = {
+            expiration_month: 'expiration_month',
+            expiration_year: 'expiration_year',
+            vertical_text: 'vertical_text',
+            vertical_text_position: 'vertical_text'  // shares confidence with vertical_text
+          };
+
           function applyVerified(key, verVal) {
             const preVal = preVerify[key];
-            // Reject null-out: pre-verify had a value, verify wants to erase it
-            if (preVal != null && verVal == null) return;
+
+            // Null-out attempt: pre-verify had a value, verify wants to erase it
+            if (preVal != null && verVal == null) {
+              const confKey = CONF_KEY_MAP[key];
+              const origConf = confKey ? (data.confidence?.[confKey] ?? 1.0) : 1.0;
+              const verConf = confKey ? (vData.confidence?.[confKey] ?? 0) : 0;
+
+              // PLZ-03 carve-out: allow null-out if verify is highly confident AND original was low
+              if (verConf >= 0.85 && origConf <= 0.6) {
+                nullOutLog.push({ field: key, before: preVal, after: null, origConf, verConf, action: 'allowed' });
+                data[key] = verVal;
+                return;
+              }
+
+              // Otherwise block the null-out
+              nullOutLog.push({ field: key, before: preVal, after: null, origConf, verConf, action: 'blocked' });
+              return;
+            }
+
             // Reject false→true on truncation without strong reason
             if (key === 'potentially_truncated' && preVal === false && verVal === true) return;
             data[key] = verVal;
@@ -1842,8 +1900,16 @@ Reply ONLY with JSON:
           if (vData.vertical_text !== undefined) applyVerified('vertical_text', vData.vertical_text);
           if (vData.vertical_text_position !== undefined) applyVerified('vertical_text_position', vData.vertical_text_position);
           if (vData.potentially_truncated !== undefined) applyVerified('potentially_truncated', vData.potentially_truncated);
-          if (vData.confidence?.plate_number != null) {
-            data.confidence.plate_number = Math.max(data.confidence?.plate_number || 0, vData.confidence.plate_number);
+          // Merge per-field confidence from verification pass
+          if (vData.confidence) {
+            if (vData.confidence.plate_number != null)
+              data.confidence.plate_number = Math.max(data.confidence?.plate_number || 0, vData.confidence.plate_number);
+            if (vData.confidence.expiration_month != null && data.expiration_month != null)
+              data.confidence.expiration_month = vData.confidence.expiration_month;
+            if (vData.confidence.expiration_year != null && data.expiration_year != null)
+              data.confidence.expiration_year = vData.confidence.expiration_year;
+            if (vData.confidence.vertical_text != null && data.vertical_text != null)
+              data.confidence.vertical_text = vData.confidence.vertical_text;
           }
 
           // Re-run post-processing to normalize any corrected values
@@ -1863,14 +1929,48 @@ Reply ONLY with JSON:
             }
           }
 
+          // PLZ-01: Classify each discordance with a failure_type
+          const CONFUSABLE_CHARS = new Set(['0','O','1','I','L','5','S','8','B','2','Z']);
+          function classifyFailure(d) {
+            const { field, before, after } = d;
+            if (field === 'plate_number' && before && after) {
+              // Check if it's character confusion (same length, differ only in confusable chars)
+              const b = String(before).toUpperCase(), a = String(after).toUpperCase();
+              if (b.length === a.length) {
+                const diffs = [...b].filter((c, i) => c !== a[i]);
+                if (diffs.length > 0 && diffs.every(c => CONFUSABLE_CHARS.has(c))) return 'char_confusion';
+              }
+              // Length difference could be bleed not stripped
+              if (Math.abs(b.length - a.length) <= 2) return 'bleed_not_stripped';
+            }
+            if (field === 'vertical_text') {
+              if (before == null && after != null) return 'vertical_text_missed';
+              if (before != null && after == null) return 'vertical_text_hallucinated';
+            }
+            if (field === 'expiration_month' || field === 'expiration_year') {
+              if (before == null && after != null) return 'sticker_missed';
+              if (before != null && after == null) return 'sticker_hallucinated';
+              if (before != null && after != null) return 'sticker_misread';
+            }
+            if (field === 'design_type') return 'design_misclassified';
+            if (field === 'plate_number_formatted' || field === 'separators') return 'spacing_error';
+            return 'other';
+          }
+
+          discordance.forEach(d => { d.failure_type = classifyFailure(d); });
+
           data._verification = {
             corrections_reported: corrections,
             discordance: discordance,
+            null_outs: nullOutLog.length > 0 ? nullOutLog : undefined,
             verified: discordance.length === 0
           };
 
           if (discordance.length > 0) {
             console.log('[Platez] Discordance detected:', discordance);
+          }
+          if (nullOutLog.length > 0) {
+            console.log('[Platez] Null-out decisions:', nullOutLog);
           }
         } catch (e) {
           console.warn('[Platez] Verification pass failed (non-fatal):', e.message);
@@ -1884,7 +1984,7 @@ Reply ONLY with JSON:
         setTimeout(() => { statusMsg.style.display = 'none'; statusMsg.style.opacity = '1'; }, 1600);
 
         // Log the run to server (route through remote proxy when not local)
-        const logEntry = { ...data, _timestamp: new Date().toISOString(), _provider: providerSelect.value, _model: modelId };
+        const logEntry = { ...data, _timestamp: new Date().toISOString(), _provider: providerSelect.value, _model: modelId, _tokenUsage: tokenTracker };
         const isLocal = window.location.hostname.match(/localhost|127\.|192\.168\./);
         const logUrl = isLocal ? '/log' : '/Platez/log';
         fetch(logUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logEntry) })
@@ -2527,15 +2627,24 @@ Reply ONLY with JSON:
           expiration_year: 'Exp. Year', is_disabled: 'Disabled', vertical_text: 'Vertical Text',
           vertical_text_position: 'VT Position', potentially_truncated: 'Truncated'
         };
+        const FAILURE_LABELS = {
+          char_confusion: '🔤 Char Confusion', vertical_text_missed: '🔍 VT Missed',
+          vertical_text_hallucinated: '👻 VT Hallucinated', sticker_missed: '🔍 Sticker Missed',
+          sticker_hallucinated: '👻 Sticker Hallucinated', sticker_misread: '❌ Sticker Misread',
+          design_misclassified: '🏷 Design Error', spacing_error: '↔ Spacing Error',
+          bleed_not_stripped: '🩸 Bleed Error', other: '⚠️ Other'
+        };
         discList.innerHTML = v.discordance.map(d => {
           const label = FIELD_LABELS[d.field] || d.field;
           const bef = d.before === null ? '—' : (Array.isArray(d.before) ? d.before.join(', ') : String(d.before));
           const aft = d.after === null ? '—' : (Array.isArray(d.after) ? d.after.join(', ') : String(d.after));
+          const ftLabel = d.failure_type ? FAILURE_LABELS[d.failure_type] || d.failure_type : '';
           return `<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px solid rgba(255,185,56,0.12);">
             <span style="font-weight:600;min-width:100px;color:var(--warn);">${label}</span>
             <span style="color:var(--error);text-decoration:line-through;opacity:0.7;">${bef}</span>
             <span style="color:var(--muted);">→</span>
             <span style="color:var(--success);font-weight:600;">${aft}</span>
+            ${ftLabel ? `<span style="font-size:0.7rem;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--muted);white-space:nowrap;">${ftLabel}</span>` : ''}
           </div>`;
         }).join('');
         discBox.style.display = 'block';
