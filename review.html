@@ -179,16 +179,16 @@
         <div class="empty-state" id="empty-state">
           <div class="icon">🔬</div>
           <p>Select a run to review</p>
-          <p style="font-size:0.78rem;color:var(--muted)">Use ↑↓ to navigate · Enter for ground truth</p>
+          <p style="font-size:0.78rem;color:var(--muted)">Use ↑↓ to navigate · Enter to confirm correct</p>
         </div>
         <div id="review-content" style="display:none;"></div>
       </div>
       <div class="action-bar" id="action-bar" style="display:none;">
         <button class="btn btn-ghost" onclick="resetFields()" id="reset-btn">↺ Reset</button>
         <button class="btn btn-primary" onclick="saveCorrections(false)" id="save-btn" disabled>Save</button>
-        <button class="btn btn-success" onclick="saveCorrections(true)" id="gt-btn">✅ Ground Truth</button>
+        <button class="btn btn-success" onclick="saveCorrections(true)" id="gt-btn" title="Confirms all fields are correct (fix any errors first). Used to build the accuracy benchmark dataset.">✅ Confirm Correct</button>
         <span class="hint">
-          <kbd>↑</kbd><kbd>↓</kbd> navigate · <kbd>Enter</kbd> ground truth · <kbd>Esc</kbd> reset
+          <kbd>↑</kbd><kbd>↓</kbd> navigate · <kbd>Enter</kbd> confirm correct · <kbd>Esc</kbd> reset
         </span>
       </div>
     </div>
@@ -430,7 +430,7 @@
 
       // Alerts
       if (d.ground_truth || d._type === 'ground_truth') {
-        html += `<div class="alert alert-gt">✅ Marked as ground truth</div>`;
+        html += `<div class="alert alert-gt">✅ ✅ Verified correct</div>`;
       }
       if (feedback) {
         html += `<div class="alert alert-feedback"><div><div class="alert-title">⚠️ User Feedback</div><div class="alert-body">${esc(feedback.data.feedback)}</div></div></div>`;
@@ -548,7 +548,7 @@
         renderStats();
         renderRunList();
         renderReview(selectedRun);
-        showToast(asGT ? '✅ Marked as ground truth' : '💾 Corrections saved');
+        showToast(asGT ? '✅ ✅ Verified correct' : '💾 Corrections saved');
       } catch (e) {
         showToast('❌ Save failed: ' + e.message);
       }
