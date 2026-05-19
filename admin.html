@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Platez — Plate Type Admin</title>
+  <style>
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3a;
+      --text: #e2e4ed; --muted: #6b6f85; --accent: #7c6af7;
+      --green: #3dd68c; --red: #ff5f72; --yellow: #ffb938;
+      --surface2: #22253a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; min-height: 100vh; }
+
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+    header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; }
+    header a { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+    header a:hover { color: var(--text); }
+    .header-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+
+    .layout { display: flex; height: calc(100vh - 53px); }
+
+    /* ── Sidebar ─────────────────────────────────── */
+    .sidebar { width: 200px; min-width: 160px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .sidebar-header { padding: 14px 16px 10px; font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; display: flex; justify-content: space-between; align-items: center; }
+    .state-list { flex: 1; overflow-y: auto; }
+    .state-item { padding: 10px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid transparent; transition: background 0.15s, padding-left 0.15s; }
+    .state-item:hover { background: var(--surface2); padding-left: 20px; padding-right: 12px; }
+    .state-item.active { background: var(--surface2); border-left-color: var(--accent); color: var(--text); padding-left: 20px; padding-right: 12px; }
+    .state-item.active .state-count { background: rgba(124, 106, 247, 0.15); color: var(--accent); }
+    .state-item .state-key { font-weight: 700; font-size: 1rem; }
+    .state-item .state-count { font-size: 0.7rem; color: var(--muted); background: var(--surface2); padding: 2px 6px; border-radius: 10px; font-weight: 600; }
+    .state-del { opacity: 0; font-size: 0.75rem; color: var(--red); cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+    .state-item:hover .state-del { opacity: 1; }
+
+    /* ── Main ───────────────────────────────────── */
+    .main { flex: 1; overflow-y: auto; padding: 24px; }
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60%; gap: 12px; color: var(--muted); }
+    .empty-state .icon { font-size: 2.5rem; }
+
+    .state-editor h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+    .state-editor h2 span.abbr { background: var(--accent); color: #fff; padding: 2px 10px; border-radius: 6px; font-size: 0.9rem; }
+
+    .group-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; margin-bottom: 16px; overflow: hidden; }
+    .group-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; background: rgba(124, 106, 247, 0.08); border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+    .group-header .group-name { font-weight: 600; flex: 1; }
+    .group-header .group-count { font-size: 0.75rem; color: var(--muted); }
+    .group-header .chevron { color: var(--muted); font-size: 0.8rem; transition: transform 0.2s; }
+    .group-card.collapsed .chevron { transform: rotate(-90deg); }
+    .group-card.collapsed .group-body { display: none; }
+    .group-actions { display: flex; gap: 6px; align-items: center; opacity: 0; transition: opacity 0.2s; }
+    .group-header:hover .group-actions { opacity: 1; }
+
+    .group-body { padding: 12px 16px; }
+    .type-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .type-row { display: flex; align-items: center; gap: 8px; }
+    .type-row::before { content: "⋮⋮"; color: var(--muted); font-size: 1.1rem; opacity: 0; transition: opacity 0.15s; cursor: grab; padding-right: 2px; line-height: 1; }
+    .type-row:hover::before { opacity: 0.4; }
+    .type-row input { flex: 1; background: transparent; border: 1px solid transparent; color: var(--text); padding: 5px 8px; border-radius: 6px; font-size: 0.9rem; outline: none; transition: border 0.15s; }
+    .type-row input:hover { border-color: var(--border); }
+    .type-row input:focus { border-color: var(--accent); background: var(--surface2); }
+    .type-del-btn { opacity: 0; color: var(--red); cursor: pointer; font-size: 1.1rem; width: 22px; text-align: center; flex-shrink: 0; }
+    .type-row:hover .type-del-btn { opacity: 1; }
+
+    .add-type-row { display: flex; gap: 8px; margin-top: 6px; }
+    .add-type-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 0.875rem; outline: none; }
+    .add-type-input:focus { border-color: var(--accent); }
+    .add-type-input::placeholder { color: var(--muted); }
+
+    /* ── Buttons ────────────────────────────────── */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 7px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.82; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--text); opacity: 1; }
+    .btn-danger { background: transparent; color: var(--red); border: 1px solid var(--red); }
+    .btn-sm { padding: 3px 9px; font-size: 0.78rem; }
+    .btn-icon { padding: 4px 8px; font-size: 0.8rem; }
+    .btn-save { background: var(--accent); color: #fff; font-weight: 700; padding: 8px 22px; }
+
+    /* ── Toast ──────────────────────────────────── */
+    #toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); padding: 10px 18px; border-radius: 8px; font-size: 0.875rem; opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 999; }
+    #toast.show { opacity: 1; }
+    #toast.ok { border-color: var(--green); color: var(--green); }
+    #toast.err { border-color: var(--red); color: var(--red); }
+
+    /* ── Modals ─────────────────────────────────── */
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
+    .modal-bg.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; min-width: 340px; display: flex; flex-direction: column; gap: 16px; }
+    .modal h3 { font-size: 1rem; font-weight: 700; }
+    .modal input, .modal select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 7px; font-size: 0.9rem; outline: none; width: 100%; }
+    .modal input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* ── Variant meta ───────────────────────────── */
+    .variant-section { margin-top: 32px; }
+    .variant-section h3 { font-size: 0.95rem; font-weight: 600; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
+    .variant-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .variant-card .variant-key { font-family: monospace; font-size: 0.85rem; color: var(--accent); font-weight: 600; }
+    .variant-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .variant-field label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 3px; }
+    .variant-field input, .variant-field select { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 5px; font-size: 0.85rem; outline: none; }
+    .variant-field input:focus { border-color: var(--accent); }
+
+    /* ── Shared nav ───────────────────────────── */
+    .topnav-admin {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 52px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 16px; gap: 14px;
+    }
+    .topnav-title { font-size: 1.05rem; font-weight: 700; }
+    .hamburger {
+      background: none; border: none; cursor: pointer; padding: 6px;
+      display: flex; flex-direction: column; gap: 5px; border-radius: 6px;
+    }
+    .hamburger:hover { background: var(--surface2); }
+    .hamburger span { display: block; width: 22px; height: 2px; background: var(--text); border-radius: 2px; transition: transform 0.2s, opacity 0.2s; }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; }
+    .drawer-overlay.open { display: block; }
+    .drawer {
+      position: fixed; top: 0; left: 0; bottom: 0; width: 240px;
+      background: var(--surface); border-right: 1px solid var(--border); z-index: 400;
+      transform: translateX(-100%); transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+      display: flex; flex-direction: column;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header { padding: 18px 20px 14px; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--border); }
+    .drawer-nav { display: flex; flex-direction: column; padding: 10px 0; }
+    .drawer-item { display: flex; align-items: center; padding: 12px 20px; color: var(--text); text-decoration: none; font-size: 0.92rem; border-left: 3px solid transparent; transition: background 0.12s; }
+    .drawer-item:hover { background: var(--surface2); }
+    .drawer-item.active { border-left-color: var(--accent); color: var(--accent); background: var(--surface2); }
+  </style>
+</head>
+<body>
+
+<!-- ── Top nav ───────────────────────────────── -->
+<nav class="topnav-admin">
+  <button class="hamburger" id="hamburger-btn"><span></span><span></span><span></span></button>
+  <span class="topnav-title">Plate<span style="color:var(--accent)">z</span></span><span style="margin-left:8px;padding:2px 8px;background:var(--surface2);border-radius:12px;font-size:0.7rem;color:var(--muted);font-weight:700;letter-spacing:0.8px;text-transform:uppercase;">Admin</span>
+  <div style="margin-left:auto;display:flex;gap:10px;align-items:center;">
+    <span id="unsaved-badge" style="display:none;color:var(--yellow);font-size:0.8rem;">● Unsaved changes</span>
+    <button class="btn btn-save" id="save-btn">Save All</button>
+  </div>
+</nav>
+<div class="drawer-overlay" id="drawer-overlay"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-header">Navigation</div>
+  <nav class="drawer-nav">
+    <a class="drawer-item" href="./">🔍 Analyzer</a>
+    <a class="drawer-item" href="./?screen=settings">⚙️ Settings</a>
+    <a class="drawer-item active" href="admin.html">🏷 Plate Type Admin</a>
+  </nav>
+</aside>
+
+<div class="layout" style="height:calc(100vh - 52px);margin-top:52px;">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      States
+      <button class="btn btn-ghost btn-icon" id="add-state-btn" title="Add state">＋</button>
+    </div>
+    <div class="state-list" id="state-list"></div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main" id="main-panel">
+    <div class="empty-state" style="height:100%;">
+      <div class="icon">🗺</div>
+      <div style="font-size:1.1rem;font-weight:600;color:var(--text);margin-top:10px;">No State Selected</div>
+      <div style="font-size:0.9rem;">Select a state from the sidebar to manage its plate types.</div>
+    </div>
+  </main>
+</div>
+
+<!-- Add State Modal -->
+<div class="modal-bg" id="modal-add-state">
+  <div class="modal">
+    <h3>Add State</h3>
+    <div>
+      <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:6px;">State abbreviation (e.g. TX, FL, NY)</label>
+      <input id="new-state-key" maxlength="5" placeholder="TX" style="text-transform:uppercase" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancel-add-state">Cancel</button>
+      <button class="btn btn-primary" id="confirm-add-state">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Group Modal -->
+<div class="modal-bg" id="modal-add-group">
+  <div class="modal">
+    <h3>Add Group</h3>
+    <div>
+      <label style="font-size:0.8rem;color:var(--muted);display:block;margin-bottom:6px;">Group name (e.g. "Specialty Plates — Veterans")</label>
+      <input id="new-group-name" placeholder="Group name" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancel-add-group">Cancel</button>
+      <button class="btn btn-primary" id="confirm-add-group">Add</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let db = {};           // full plate-types.json
+  let currentState = null;
+  let dirty = false;
+
+  // ── Load ───────────────────────────────────────
+  async function load() {
+    const res = await fetch('data/plate-types.json');
+    db = await res.json();
+    renderSidebar();
+  }
+
+  // ── Dirty tracking ─────────────────────────────
+  function markDirty() {
+    dirty = true;
+    document.getElementById('unsaved-badge').style.display = 'inline';
+  }
+  function markClean() {
+    dirty = false;
+    document.getElementById('unsaved-badge').style.display = 'none';
+  }
+
+  // ── Save ───────────────────────────────────────
+  document.getElementById('save-btn').addEventListener('click', async () => {
+    // Flush any pending edits from focused inputs
+    document.activeElement?.blur();
+    await new Promise(r => setTimeout(r, 50));
+    collectCurrentState();
+    try {
+      const res = await fetch('data/plate-types.json', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(db)
+      });
+      const j = await res.json();
+      if (j.ok) { markClean(); toast('Saved ✓', 'ok'); }
+      else toast('Save failed: ' + j.error, 'err');
+    } catch(e) { toast('Save error: ' + e.message, 'err'); }
+  });
+
+  // ── Sidebar ─────────────────────────────────────
+  function renderSidebar() {
+    const list = document.getElementById('state-list');
+    list.innerHTML = '';
+    const states = Object.keys(db).filter(k => !k.startsWith('_')).sort();
+    states.forEach(key => {
+      const count = Object.values(db[key]).flat().length;
+      const el = document.createElement('div');
+      el.className = 'state-item' + (key === currentState ? ' active' : '');
+      el.dataset.key = key;
+      el.innerHTML = `<span class="state-key">${key}</span><span class="state-count">${count} types</span><span class="state-del" title="Delete state" data-key="${key}">✕</span>`;
+      el.addEventListener('click', (e) => {
+        if (e.target.classList.contains('state-del')) return;
+        selectState(key);
+      });
+      el.querySelector('.state-del').addEventListener('click', (e) => { e.stopPropagation(); deleteState(key); });
+      list.appendChild(el);
+    });
+  }
+
+  function selectState(key) {
+    collectCurrentState();
+    currentState = key;
+    renderSidebar();
+    renderEditor(key);
+  }
+
+  function deleteState(key) {
+    if (!confirm(`Delete all plate types for ${key}? This cannot be undone.`)) return;
+    delete db[key];
+    if (currentState === key) {
+      currentState = null;
+      document.getElementById('main-panel').innerHTML = `<div class="empty-state" style="height:100%;"><div class="icon">🗺</div><div style="font-size:1.1rem;font-weight:600;color:var(--text);margin-top:10px;">No State Selected</div><div style="font-size:0.9rem;">Select a state from the sidebar to manage its plate types.</div></div>`;
+    }
+    markDirty();
+    renderSidebar();
+  }
+
+  // ── Editor ──────────────────────────────────────
+  function renderEditor(key) {
+    const groups = db[key];
+    const panel = document.getElementById('main-panel');
+
+    let html = `<div class="state-editor">
+      <h2><span class="abbr">${key}</span> Plate Types
+        <button class="btn btn-ghost btn-sm" id="add-group-btn">＋ Add Group</button>
+      </h2>`;
+
+    Object.entries(groups).forEach(([groupName, types], gi) => {
+      html += `
+      <div class="group-card" data-group="${encodeURIComponent(groupName)}">
+        <div class="group-header" onclick="this.closest('.group-card').classList.toggle('collapsed')">
+          <span class="chevron">▾</span>
+          <span class="group-name" contenteditable="true" onclick="event.stopPropagation()"
+            onblur="renameGroup(this)" data-orig="${encodeURIComponent(groupName)}">${groupName}</span>
+          <span class="group-count">${types.length} types</span>
+          <div class="group-actions" onclick="event.stopPropagation()">
+            <button class="btn btn-danger btn-sm" onclick="deleteGroup('${encodeURIComponent(groupName)}')">Delete group</button>
+          </div>
+        </div>
+        <div class="group-body">
+          <div class="type-list" data-group="${encodeURIComponent(groupName)}">
+            ${types.map((t, ti) => `
+            <div class="type-row">
+              <input type="text" value="${t.replace(/"/g,'&quot;')}" 
+                onchange="updateType('${encodeURIComponent(groupName)}', ${ti}, this.value)"
+                onblur="updateType('${encodeURIComponent(groupName)}', ${ti}, this.value)" />
+              <span class="type-del-btn" onclick="deleteType('${encodeURIComponent(groupName)}', ${ti})" title="Remove">✕</span>
+            </div>`).join('')}
+          </div>
+          <div class="add-type-row">
+            <input class="add-type-input" placeholder="+ Add plate type…" data-group="${encodeURIComponent(groupName)}"
+              onkeydown="if(event.key==='Enter') addType(this)" />
+            <button class="btn btn-ghost btn-sm" onclick="addType(this.previousElementSibling)">Add</button>
+          </div>
+        </div>
+      </div>`;
+    });
+
+    // Variant meta section
+    const meta = db._variantMeta || {};
+    const stateVariants = Object.entries(meta).filter(([k, v]) => v.state === key);
+    if (stateVariants.length) {
+      html += `<div class="variant-section"><h3>Design Variant Metadata</h3>`;
+      stateVariants.forEach(([vKey, vData]) => {
+        html += `
+        <div class="variant-card">
+          <div class="variant-key">${vKey}</div>
+          <div style="font-size:0.85rem;color:var(--muted);margin-bottom:4px;">${vData.description || ''}</div>
+          <div class="variant-fields">
+            <div class="variant-field"><label>Systematic Separator</label>
+              <select onchange="updateVariant('${vKey}','systematic_separator',this.value)">
+                <option value="" ${!vData.systematic_separator?'selected':''}>none</option>
+                <option value="bullet" ${vData.systematic_separator==='bullet'?'selected':''}>bullet (•)</option>
+                <option value="half-space" ${vData.systematic_separator==='half-space'?'selected':''}>half-space (·)</option>
+                <option value="full-space" ${vData.systematic_separator==='full-space'?'selected':''}>full-space</option>
+                <option value="hyphen" ${vData.systematic_separator==='hyphen'?'selected':''}>hyphen (-)</option>
+              </select>
+            </div>
+            <div class="variant-field"><label>Plate Pattern (regex)</label>
+              <input type="text" value="${vData.plate_pattern||''}" onblur="updateVariant('${vKey}','plate_pattern',this.value)" /></div>
+            <div class="variant-field" style="grid-column:1/-1"><label>Description</label>
+              <input type="text" value="${vData.description||''}" onblur="updateVariant('${vKey}','description',this.value)" /></div>
+            <div class="variant-field" style="grid-column:1/-1"><label>Note</label>
+              <input type="text" value="${vData.note||''}" onblur="updateVariant('${vKey}','note',this.value)" /></div>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+    panel.innerHTML = html;
+    document.getElementById('add-group-btn').addEventListener('click', () => openAddGroupModal(key));
+  }
+
+  // ── Type operations ──────────────────────────────
+  function updateType(groupEnc, idx, value) {
+    const group = decodeURIComponent(groupEnc);
+    if (db[currentState]?.[group]) {
+      db[currentState][group][idx] = value.trim();
+      markDirty();
+    }
+  }
+
+  function deleteType(groupEnc, idx) {
+    const group = decodeURIComponent(groupEnc);
+    db[currentState][group].splice(idx, 1);
+    markDirty();
+    renderEditor(currentState);
+  }
+
+  function addType(input) {
+    const val = input.value.trim();
+    if (!val) return;
+    const group = decodeURIComponent(input.dataset.group);
+    if (!db[currentState][group]) db[currentState][group] = [];
+    db[currentState][group].push(val);
+    input.value = '';
+    markDirty();
+    renderEditor(currentState);
+  }
+
+  // ── Group operations ────────────────────────────
+  function renameGroup(el) {
+    const orig = decodeURIComponent(el.dataset.orig);
+    const newName = el.textContent.trim();
+    if (newName === orig || !newName) { el.textContent = orig; return; }
+    if (db[currentState][newName]) { toast('Group already exists', 'err'); el.textContent = orig; return; }
+    // Preserve key order
+    const entries = Object.entries(db[currentState]);
+    db[currentState] = Object.fromEntries(entries.map(([k, v]) => [k === orig ? newName : k, v]));
+    markDirty();
+    renderEditor(currentState);
+  }
+
+  function deleteGroup(groupEnc) {
+    const group = decodeURIComponent(groupEnc);
+    if (!confirm(`Delete group "${group}" and all its types?`)) return;
+    delete db[currentState][group];
+    markDirty();
+    renderEditor(currentState);
+  }
+
+  // ── Add Group Modal ──────────────────────────────
+  let pendingGroupState = null;
+  function openAddGroupModal(key) {
+    pendingGroupState = key;
+    document.getElementById('new-group-name').value = '';
+    document.getElementById('modal-add-group').classList.add('open');
+    setTimeout(() => document.getElementById('new-group-name').focus(), 50);
+  }
+  document.getElementById('cancel-add-group').addEventListener('click', () => {
+    document.getElementById('modal-add-group').classList.remove('open');
+  });
+  document.getElementById('confirm-add-group').addEventListener('click', () => {
+    const name = document.getElementById('new-group-name').value.trim();
+    if (!name) return;
+    if (!db[pendingGroupState]) db[pendingGroupState] = {};
+    db[pendingGroupState][name] = [];
+    markDirty();
+    renderSidebar();
+    renderEditor(pendingGroupState);
+    document.getElementById('modal-add-group').classList.remove('open');
+  });
+  document.getElementById('new-group-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('confirm-add-group').click();
+  });
+
+  // ── Add State Modal ──────────────────────────────
+  document.getElementById('add-state-btn').addEventListener('click', () => {
+    document.getElementById('new-state-key').value = '';
+    document.getElementById('modal-add-state').classList.add('open');
+    setTimeout(() => document.getElementById('new-state-key').focus(), 50);
+  });
+  document.getElementById('cancel-add-state').addEventListener('click', () => {
+    document.getElementById('modal-add-state').classList.remove('open');
+  });
+  document.getElementById('confirm-add-state').addEventListener('click', () => {
+    const key = document.getElementById('new-state-key').value.trim().toUpperCase();
+    if (!key) return;
+    if (db[key]) { toast(`${key} already exists`, 'err'); return; }
+    db[key] = { 'Standard Plates': ['Standard Passenger Vehicle'] };
+    markDirty();
+    renderSidebar();
+    selectState(key);
+    document.getElementById('modal-add-state').classList.remove('open');
+  });
+  document.getElementById('new-state-key').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('confirm-add-state').click();
+  });
+
+  // ── Variant meta operations ──────────────────────
+  function updateVariant(key, field, value) {
+    if (!db._variantMeta) db._variantMeta = {};
+    db._variantMeta[key][field] = value || null;
+    markDirty();
+  }
+
+  // ── Collect unsaved edits before navigation ──────
+  function collectCurrentState() {
+    if (!currentState) return;
+    // Input-based type values are already written via onchange/onblur.
+    // Group renames are handled via contenteditable blur.
+  }
+
+  // ── Variant metadata update ──────────────────────
+  function updateVariant(vKey, field, value) {
+    if (db._variantMeta?.[vKey]) {
+      db._variantMeta[vKey][field] = value === '' ? null : value;
+      markDirty();
+    }
+  }
+
+  // ── Toast ────────────────────────────────────────
+  function toast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => el.className = '', 2500);
+  }
+
+  // ── Unsaved warning on nav ───────────────────────
+  window.addEventListener('beforeunload', e => {
+    if (dirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // ── Drawer ──────────────────────────────────
+  const hbtn = document.getElementById('hamburger-btn');
+  const drw  = document.getElementById('drawer');
+  const dov  = document.getElementById('drawer-overlay');
+  function openDrawer()  { drw.classList.add('open'); dov.classList.add('open'); hbtn.classList.add('open'); }
+  function closeDrawer() { drw.classList.remove('open'); dov.classList.remove('open'); hbtn.classList.remove('open'); }
+  hbtn.addEventListener('click', () => drw.classList.contains('open') ? closeDrawer() : openDrawer());
+  dov.addEventListener('click', closeDrawer);
+
+  load();
+</script>
+</body>
+</html>

@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Platez — Pipeline Documentation</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3452;
+      --accent: #4f7eff;
+      --accent-glow: rgba(79, 126, 255, 0.18);
+      --text: #e8eaf6;
+      --muted: #7b82a8;
+      --success: #3dd68c;
+      --warn: #ffb938;
+      --error: #ff5f72;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Top nav ──────────────────────────────── */
+    .topnav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      height: 52px; background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 16px; gap: 14px;
+    }
+    .topnav-title { font-size: 1.1rem; font-weight: 700; flex: 1; }
+    .topnav-title span { color: var(--accent); }
+    .topnav-right { font-size: 0.8rem; color: var(--muted); }
+    .topnav a { color: var(--muted); text-decoration: none; font-size: 0.85rem; transition: color 0.15s; }
+    .topnav a:hover { color: var(--text); }
+
+    .hamburger {
+      background: none; border: none; cursor: pointer; padding: 6px; display: flex;
+      flex-direction: column; gap: 5px; border-radius: 6px;
+    }
+    .hamburger:hover { background: var(--surface2); }
+    .hamburger span {
+      display: block; width: 22px; height: 2px; background: var(--text);
+      border-radius: 2px; transition: transform 0.2s, opacity 0.2s;
+    }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* ── Drawer ───────────────────────────────── */
+    .drawer-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 300; backdrop-filter: blur(2px);
+    }
+    .drawer-overlay.open { display: block; }
+    .drawer {
+      position: fixed; top: 0; left: 0; bottom: 0; width: 240px;
+      background: var(--surface); border-right: 1px solid var(--border);
+      z-index: 400; transform: translateX(-100%);
+      transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+      display: flex; flex-direction: column;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header {
+      padding: 18px 20px 14px; font-size: 0.72rem; font-weight: 700;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .drawer-nav { display: flex; flex-direction: column; padding: 10px 0; }
+    .drawer-item {
+      display: flex; align-items: center; padding: 12px 20px; gap: 10px;
+      color: var(--text); text-decoration: none; font-size: 0.92rem;
+      border-left: 3px solid transparent; transition: background 0.12s;
+    }
+    .drawer-item:hover { background: var(--surface2); }
+    .drawer-item.active { border-left-color: var(--accent); color: var(--accent); background: var(--surface2); }
+
+    /* ── Content ──────────────────────────────── */
+    .content {
+      padding-top: 72px;
+      max-width: 900px;
+      margin: 0 auto;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+      padding-bottom: 6rem;
+    }
+
+    h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 0.5rem; }
+    h1 span { color: var(--accent); }
+    .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+
+    h2 {
+      font-size: 1.25rem; font-weight: 700; margin-top: 2.5rem; margin-bottom: 1rem;
+      padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    h2 .badge {
+      font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .badge-pass { background: var(--accent); color: #fff; }
+    .badge-cond { background: var(--warn); color: #000; }
+    .badge-post { background: var(--success); color: #000; }
+    .badge-sys { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+    h3 { font-size: 1rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--accent); }
+
+    p { margin-bottom: 0.8rem; color: var(--text); }
+    p.note { color: var(--muted); font-size: 0.85rem; font-style: italic; }
+
+    ul, ol { margin-left: 1.25rem; margin-bottom: 1rem; }
+    li { margin-bottom: 0.3rem; }
+    li code { font-size: 0.82rem; }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: var(--surface2); padding: 1px 6px; border-radius: 4px;
+      font-size: 0.85rem; color: var(--warn);
+    }
+
+    pre {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 1rem 1.25rem; overflow-x: auto; margin-bottom: 1.25rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem; line-height: 1.5; color: var(--text);
+    }
+
+    /* ── Pipeline flow diagram ────────────────── */
+    .pipeline-flow {
+      display: flex; flex-direction: column; gap: 0; margin: 1.5rem 0 2rem;
+    }
+    .pipeline-step {
+      display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      position: relative;
+    }
+    .pipeline-step .step-num {
+      width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
+      color: #fff; font-weight: 700; font-size: 0.85rem;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .pipeline-step.conditional .step-num { background: var(--warn); color: #000; }
+    .pipeline-step .step-text { flex: 1; }
+    .pipeline-step .step-title { font-weight: 700; font-size: 0.95rem; }
+    .pipeline-step .step-desc { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .pipeline-arrow {
+      display: flex; align-items: center; justify-content: center;
+      height: 28px; color: var(--muted); font-size: 1.2rem;
+    }
+    .pipeline-arrow.conditional-label {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--warn);
+    }
+    .pipeline-connector {
+      width: 2px; height: 16px; background: var(--border); margin: 0 auto;
+    }
+    .post-process-tag {
+      font-size: 0.65rem; background: rgba(61,214,140,0.12); color: var(--success);
+      padding: 2px 6px; border-radius: 3px; margin-left: 8px; font-weight: 600;
+    }
+
+    /* ── Collapsible sections ─────────────────── */
+    details {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      margin-bottom: 1rem; overflow: hidden;
+    }
+    details summary {
+      padding: 12px 16px; cursor: pointer; user-select: none;
+      font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;
+      list-style: none; transition: background 0.15s;
+    }
+    details summary::-webkit-details-marker { display: none; }
+    details summary:hover { background: var(--surface2); }
+    details summary::before { content: '▸'; color: var(--muted); font-size: 0.75rem; transition: transform 0.2s; }
+    details[open] summary::before { transform: rotate(90deg); }
+    details .detail-body { padding: 0 16px 16px; }
+
+    /* ── Version history ──────────────────────── */
+    .version-entry {
+      background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+      border-radius: 10px; padding: 16px 20px; margin-bottom: 12px;
+    }
+    .version-entry h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
+    .version-entry ul { margin-left: 1rem; }
+    .version-entry li { font-size: 0.85rem; color: var(--muted); }
+
+    /* ── Table ─────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 0.85rem; }
+    th { text-align: left; padding: 8px 12px; background: var(--surface2); color: var(--muted);
+         font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+    td { padding: 8px 12px; border-bottom: 1px solid rgba(46,52,82,0.5); }
+    tr:hover td { background: rgba(79,126,255,0.04); }
+
+    @media (max-width: 600px) {
+      .content { padding-left: 1rem; padding-right: 1rem; }
+      h1 { font-size: 1.4rem; }
+      .pipeline-step { padding: 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="topnav">
+    <button class="hamburger" id="hamburger-btn" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <span class="topnav-title">Plate<span>z</span></span>
+    <span class="topnav-right" id="doc-version"></span>
+  </nav>
+
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">Navigation</div>
+    <nav class="drawer-nav">
+      <a class="drawer-item" href="index.html">🔍 Analyzer</a>
+      <a class="drawer-item" href="index.html?screen=settings">⚙️ Settings</a>
+      <a class="drawer-item" href="admin.html">🏷 Plate Type Admin</a>
+      <a class="drawer-item active" href="pipeline.html">📋 Pipeline Docs</a>
+    </nav>
+  </aside>
+
+  <div class="content">
+    <h1>Analysis <span>Pipeline</span></h1>
+    <p class="subtitle">Complete documentation of the Platez plate analysis process — version <strong id="version-label"></strong></p>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Pipeline Overview</h2>
+    <p>Every plate analysis runs through a multi-pass pipeline. Each pass focuses on a specific aspect, and conditional passes only execute when earlier passes need refinement. Post-processing normalizes and cross-validates after each major pass.</p>
+
+    <div class="pipeline-flow">
+      <div class="pipeline-step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <div class="step-title">Primary Plate Reading</div>
+          <div class="step-desc">Full-image analysis: plate number, spacing, state, expiration, disabled status, vertical text</div>
+        </div>
+        <span class="post-process-tag">+ post-process</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-arrow conditional-label">if confidence &lt; 0.7 or expiration missing</div>
+      <div class="pipeline-step conditional">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <div class="step-title">Re-Read (Conditional)</div>
+          <div class="step-desc">Focused re-read of plate number and expiration stickers</div>
+        </div>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-arrow conditional-label">if expiration still missing</div>
+      <div class="pipeline-step conditional">
+        <div class="step-num">2a</div>
+        <div class="step-text">
+          <div class="step-title">Corner Crop Sticker Reading (Conditional)</div>
+          <div class="step-desc">Zoomed corner crops for month/year sticker extraction with anti-hallucination</div>
+        </div>
+        <span class="post-process-tag">+ post-process</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-arrow conditional-label">if state has taxonomy data</div>
+      <div class="pipeline-step conditional">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <div class="step-title">Design Classification (Conditional)</div>
+          <div class="step-desc">Taxonomy-based design type classification using state-specific plate type lists</div>
+        </div>
+        <span class="post-process-tag">+ post-process</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-arrow conditional-label">if disabled plate but no vertical text read</div>
+      <div class="pipeline-step conditional">
+        <div class="step-num">4</div>
+        <div class="step-text">
+          <div class="step-title">Edge Crop for Vertical Text (Conditional)</div>
+          <div class="step-desc">High-contrast edge crops to read DP/DV suffix markers</div>
+        </div>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-step">
+        <div class="step-num">5</div>
+        <div class="step-text">
+          <div class="step-title">Verification</div>
+          <div class="step-desc">Model re-examines image against complete analysis; discordance detection</div>
+        </div>
+        <span class="post-process-tag">+ post-process</span>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Pass 1: Primary Plate Reading <span class="badge badge-pass">Always</span></h2>
+    <p>The first pass sends the full plate image with a comprehensive prompt structured into 5 sequential steps. No taxonomy is injected at this stage — keeping the prompt lightweight improves character-reading accuracy.</p>
+
+    <h3>Prompt Structure</h3>
+    <ol>
+      <li><strong>Step 1 — Vertical Edge Text:</strong> Inspect all four edges for text printed perpendicular (90° rotated) to the plate. Critical distinction: horizontal state names (e.g. cursive "California") are NOT vertical text. Only genuinely rotated text like "DP" or "DV" qualifies.</li>
+      <li><strong>Step 2 — Disabled/ISA Logo and Suffix:</strong> Detect wheelchair symbol, determine position (left/right/none). Critical DP vs DV distinction — the second character changes the entire classification.</li>
+      <li><strong>Step 3 — Plate Number and Spacing:</strong> Read center alphanumeric characters. Includes truncation check (cropped edges), spacing-first analysis (scan gaps before transcribing), and explicit anti-collapse rules for formatted output.</li>
+      <li><strong>Step 4 — Expiration:</strong> Read month sticker (usually top-left) and year sticker (usually top-right) independently. Month/year stickers are separate physical tabs. Convert abbreviations to integers.</li>
+      <li><strong>Step 5 — Spacing and Symbols:</strong> Classify separator types (full-space, half-space, bullet, hyphen), determine separator source (design vs assigned), and identify symbols in character slots.</li>
+    </ol>
+
+    <h3>Separator Types</h3>
+    <table>
+      <tr><th>Type</th><th>Unicode</th><th>Description</th><th>Example</th></tr>
+      <tr><td><code>full-space</code></td><td>U+0020</td><td>Wide visible gap (~1 char width)</td><td>V X D</td></tr>
+      <tr><td><code>half-space</code></td><td>U+00B7 ·</td><td>Wider than kerning, no physical dot</td><td>MY·COAST</td></tr>
+      <tr><td><code>bullet</code></td><td>U+2022 •</td><td>Physical raised/printed dot</td><td>669•ZHB</td></tr>
+      <tr><td><code>hyphen</code></td><td>-</td><td>Printed dash</td><td>ABC-1234</td></tr>
+      <tr><td><code>none</code></td><td>—</td><td>Uniform kerning only</td><td>1ABC234</td></tr>
+    </table>
+
+    <details>
+      <summary>Output JSON Schema</summary>
+      <div class="detail-body">
+        <pre>{
+  "plate_number":            "string — alphanumeric only, no separators",
+  "plate_number_formatted":  "string — with separator encoding (spaces, ·, •, -)",
+  "separators":              ["full-space" | "half-space" | "bullet" | "hyphen" | "none"],
+  "separator_source":        "assigned | design | mixed | null",
+  "spacing_notes":           "string | null — only for ambiguous cases",
+  "symbols_in_lpn":          "[] | null | [strings] — symbols in character slots",
+  "state":                   "string — full state name",
+  "design_type":             "string — plate type (free description at this stage)",
+  "design": {
+    "background":            "solid | gradient | scenic",
+    "colors":                ["primary", "secondary"],
+    "font_style":            "script | block | mixed",
+    "state_name_position":   "top | bottom | none",
+    "state_name_style":      "cursive | block | none",
+    "variant_hint":          "string | null — design series identifier"
+  },
+  "expiration_month":        "integer 1-12 | null",
+  "expiration_year":         "integer (4-digit) | null",
+  "expiration_sticker_color":"string | null",
+  "is_disabled":             "boolean",
+  "dp_logo_position":        "left | right | none",
+  "vertical_text":           "string | null — e.g. DP, DV",
+  "vertical_text_type":      "plate_suffix | state_name | decorative | null",
+  "vertical_text_position":  "left | right | null",
+  "potentially_truncated":   "boolean",
+  "confidence": {
+    "plate_number":          "0.0-1.0",
+    "expiration_month":      "0.0-1.0 | null",
+    "expiration_year":       "0.0-1.0 | null",
+    "vertical_text":         "0.0-1.0 | null"
+  }
+}</pre>
+      </div>
+    </details>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Pass 2: Re-Read <span class="badge badge-cond">Conditional</span></h2>
+
+    <h3>Trigger Conditions</h3>
+    <ul>
+      <li>Plate number confidence &lt; 0.7</li>
+      <li>Expiration month or year is <code>null</code> AND plate has mixed characters (letters + digits)</li>
+    </ul>
+
+    <h3>Behavior</h3>
+    <p>Sends the image again with the Pass 1 result as context. The prompt focuses specifically on confirming/correcting the plate number and reading expiration stickers that may have been missed.</p>
+
+    <h3>Merge Strategy</h3>
+    <ul>
+      <li><strong>Plate number:</strong> Adopts Pass 2's value only if its confidence is higher than Pass 1's</li>
+      <li><strong>Expiration:</strong> Adopts Pass 2's month/year if provided (non-undefined)</li>
+      <li><strong>Confidence:</strong> Takes the maximum of both passes</li>
+    </ul>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Pass 2a: Corner Crop Sticker Reading <span class="badge badge-cond">Conditional</span></h2>
+
+    <h3>Trigger Conditions</h3>
+    <p>Expiration month or year is still <code>null</code> after Pass 2.</p>
+
+    <h3>Image Processing</h3>
+    <table>
+      <tr><th>Function</th><th>Crop Region</th><th>Scale</th><th>Filters</th></tr>
+      <tr><td><code>cropCorner()</code></td><td>30% width × 30% height from corner</td><td>4×</td><td>contrast(2.2) brightness(1.1) saturate(1.5)</td></tr>
+    </table>
+
+    <h3>Sub-steps</h3>
+    <ol>
+      <li><strong>Month sticker (left corner):</strong> Asks model to identify a colored sticker tab with month text. Requires <code>sticker_visible: true</code> and confidence ≥ 0.5 before accepting.</li>
+      <li><strong>Month fallback (right corner):</strong> If left corner found nothing, tries the right corner.</li>
+      <li><strong>Year sticker (right corner):</strong> Same anti-hallucination pattern — must see an actual sticker with digits.</li>
+    </ol>
+
+    <h3>Anti-Hallucination</h3>
+    <p>The model must explicitly confirm <code>"sticker_visible": true</code> before any value is accepted. If the model reports no sticker visible, the value stays <code>null</code> rather than being guessed. All sticker confidence is capped at 0.85.</p>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Pass 3: Design Classification <span class="badge badge-cond">Conditional</span></h2>
+
+    <h3>Trigger Conditions</h3>
+    <p>The detected state has taxonomy data in <code>plate-types.json</code>.</p>
+
+    <h3>Taxonomy Injection</h3>
+    <p>A flat numbered list of valid design types for the state is built from the taxonomy file. The model must pick one verbatim — no paraphrasing, no returning numbers.</p>
+
+    <h3>Context Forwarding</h3>
+    <ul>
+      <li>Pass 1's <code>design_type</code> is provided for reference</li>
+      <li>Pass 1's <code>variant_hint</code> is provided as a "strong signal" — if it matches a taxonomy entry, the model is told to prefer it over generic types</li>
+    </ul>
+
+    <h3>California Visual Cues</h3>
+    <p>California plates get extra classification guidance injected into the prompt:</p>
+    <ul>
+      <li><strong>BLACK background + gold characters + gold script "CALIFORNIA"</strong> → Legacy Black Plate (1963)</li>
+      <li><strong>YELLOW/GOLD background + black characters</strong> → Legacy Yellow Plate (1956)</li>
+      <li><strong>White/blue gradient</strong> → check for special interest art (Whale Tail, Yosemite, Lake Tahoe, Environmental, Arts Council, Breast Cancer, Pet Lovers, Firefighters, Collegiate)</li>
+    </ul>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Pass 4: Edge Crop for Vertical Text <span class="badge badge-cond">Conditional</span></h2>
+
+    <h3>Trigger Conditions</h3>
+    <p>Plate is disabled (<code>is_disabled: true</code>) but <code>vertical_text</code> is still <code>null</code>.</p>
+
+    <h3>Image Processing</h3>
+    <table>
+      <tr><th>Function</th><th>Crop Region</th><th>Scale</th><th>Filters</th></tr>
+      <tr><td><code>cropEdge()</code></td><td>55% width strip from left/right edge, full height</td><td>3×</td><td>contrast(2.0) brightness(1.1) saturate(1.3)</td></tr>
+    </table>
+    <p class="note">55% width with overlap ensures the DP/DV text (between wheelchair icon and plate number) is captured from both sides.</p>
+
+    <h3>Strategy</h3>
+    <ol>
+      <li><strong>Independent edge calls:</strong> Left and right edge crops are sent as separate model calls (not combined) to avoid image-order confusion.</li>
+      <li><strong>Candidate selection:</strong> Both sides' results are collected. Only valid suffixes (DP, DV, DPE, DVE) are accepted. The highest-confidence candidate wins.</li>
+      <li><strong>Full plate fallback:</strong> If edge crops fail, a final attempt uses the full plate image with a targeted prompt asking specifically about stacked vertical letters near the wheelchair icon.</li>
+    </ol>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Pass 5: Verification <span class="badge badge-pass">Always</span></h2>
+
+    <h3>Purpose</h3>
+    <p>The model re-examines the original plate image alongside the complete analysis from all previous passes. It runs an 8-point verification checklist and can confirm or correct each field.</p>
+
+    <h3>Verification Checklist</h3>
+    <ol>
+      <li><strong>Plate Number:</strong> Character accuracy, count, confusable characters (0/O, 1/I/L, 5/S, 8/B, 2/Z)</li>
+      <li><strong>Spacing:</strong> Do formatted separators match visible gaps? Standard sequential plates shouldn't have spaces.</li>
+      <li><strong>State:</strong> Correct identification from plate design/text</li>
+      <li><strong>Design Type:</strong> Accurate description of visual design features</li>
+      <li><strong>Expiration:</strong> Month/year match visible sticker tabs</li>
+      <li><strong>Disabled:</strong> Wheelchair/ISA symbol present or absent</li>
+      <li><strong>Vertical Text:</strong> Edge text (DP/DV) captured correctly</li>
+      <li><strong>Truncation:</strong> Any plate edge cropped in the image</li>
+    </ol>
+
+    <h3>Protection Rules</h3>
+    <p>The verification pass has guardrails to prevent regression:</p>
+    <ul>
+      <li><strong>No null-outs:</strong> If a previous pass found a non-null value, the verification pass can change it to a different value but cannot erase it to <code>null</code>.</li>
+      <li><strong>No false truncation:</strong> Cannot flip <code>potentially_truncated</code> from <code>false</code> to <code>true</code>.</li>
+      <li><strong>Prompt reinforcement:</strong> The model is explicitly told not to second-guess uncertain-but-reasonable reads.</li>
+    </ul>
+
+    <h3>Discordance Detection</h3>
+    <p>Before the verification pass runs, the current analysis state is snapshotted. After verification completes and values are applied, a field-by-field diff is computed. The result is stored in the <code>_verification</code> metadata:</p>
+    <pre>{
+  "_verification": {
+    "corrections_reported": ["field1", "field2"],  // what the model said it changed
+    "discordance": [                                // actual computed diff
+      { "field": "plate_number", "before": "PR8042", "after": "R8042" },
+      { "field": "design_type", "before": "Standard", "after": "Whale Tail" }
+    ],
+    "verified": false  // true if no discordance found
+  }
+}</pre>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Post-Processing Pipeline <span class="badge badge-post">After Each Pass</span></h2>
+    <p>The <code>postProcess()</code> function runs after Pass 1, Pass 2a, Pass 3, and Pass 5. It performs 30+ normalization, validation, and derivation steps.</p>
+
+    <details>
+      <summary>Steps 1–5: Normalization</summary>
+      <div class="detail-body">
+        <ol>
+          <li><strong>Null-like strings:</strong> Convert "null", "n/a", "na", "none", "" → <code>null</code> for key fields (spacing_notes, vertical_text, plate_number, etc.)</li>
+          <li><strong>Confidence initialization:</strong> Ensure <code>confidence</code> object exists. Cap expiration confidence at 0.90 (stickers are inherently hard to read). Clamp plate_number confidence to [0, 1].</li>
+          <li><strong>dp_logo_position default:</strong> Set to <code>"none"</code> if missing.</li>
+          <li><strong>Infer is_disabled:</strong> If <code>dp_logo_position</code> is not "none", force <code>is_disabled: true</code>.</li>
+          <li><strong>Normalize vertical_text_position:</strong> Extract "left" or "right" from freeform strings; set to <code>null</code> if neither.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details>
+      <summary>Steps 5a–5b: Expiration Normalization</summary>
+      <div class="detail-body">
+        <ol start="6">
+          <li><strong>Strip parenthetical annotations:</strong> Model sometimes appends metadata to expiration — e.g. <code>"15 (black)"</code> → <code>"15"</code>, <code>"2015 (blue)"</code> → <code>2015</code>.</li>
+          <li><strong>2-digit → 4-digit year:</strong> Numbers 0–99 become 2000–2099 (stickers often show just "10" meaning 2010).</li>
+          <li><strong>String year parsing:</strong> Handles string years, sets to <code>null</code> if unparseable.</li>
+          <li><strong>Month string → integer:</strong> Convert abbreviations (JAN→1, FEB→2, etc.) using the MONTH_MAP lookup.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details>
+      <summary>Steps 6–8: Vertical Text Filtering</summary>
+      <div class="detail-body">
+        <ol start="10">
+          <li><strong>Strip chrome labels:</strong> Remove known UI labels misread as vertical text: "MO", "YR", "MO YR", "MONTH", "YEAR", "STATE".</li>
+          <li><strong>Strip state name:</strong> If vertical_text matches the state name (e.g. "California"), it's a horizontal design element, not rotated text. Rejected with reason <code>"state_name_horizontal"</code>.</li>
+          <li><strong>Hard filter — known suffixes only:</strong> Only DP, DV, DPE, DVE are allowed as vertical text. Everything else is rejected and preserved in <code>_rejected_vertical_text</code> for manual review.</li>
+          <li><strong>Move month/year from vertical_text (pass 1):</strong> If vertical_text contains month abbreviations or year patterns, extract them to expiration fields and null out vertical_text.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details>
+      <summary>Steps 7–8: Formatted Plate Normalization</summary>
+      <div class="detail-body">
+        <ol start="14">
+          <li><strong>Unicode escape replacement:</strong> Convert literal "U+0020", "U+00B7", "U+2022" to actual characters. Strip hyphenation points (U+2027).</li>
+          <li><strong>Bullet promotion:</strong> If separators says "bullet" but formatted string uses · (middle dot), promote to • (bullet).</li>
+          <li><strong>Content validation:</strong> Strip separators from formatted string and compare to plate_number. If they don't match (hallucinated content), reset formatted to plate_number.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details>
+      <summary>Steps 8–8c: Disabled Plate Bleed Strips</summary>
+      <div class="detail-body">
+        <ol start="17">
+          <li><strong>DP prefix bleed strip:</strong> On disabled plates, the model sometimes includes the DP/DV suffix at the START of plate_number (e.g. "DPR8042" → "R8042"). Strips the longest prefix that matches a suffix of the vertical text marker. Requires at least 3 characters remaining.</li>
+          <li><strong>DP suffix bleed strip:</strong> Same logic for the END of plate_number (e.g. "00000D" with vertical_text="DV" → "00000"). Strips trailing characters that are a prefix of the marker.</li>
+          <li><strong>Confidence re-evaluation:</strong> After stripping, pure-letter or pure-digit plates (no mixed characters) get a confidence floor of 0.9 — no inter-class ambiguity means high confidence.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details>
+      <summary>Steps 9–10: Cross-Validation</summary>
+      <div class="detail-body">
+        <ol start="20">
+          <li><strong>Move month/year (2nd pass):</strong> Catches date patterns in vertical_text not caught in step 13.</li>
+          <li><strong>Duplicate check:</strong> If vertical_text exactly matches plate_number (after stripping separators), clear it — it's a duplicate read.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details>
+      <summary>Steps 10b–10e: Separator Logic</summary>
+      <div class="detail-body">
+        <ol start="22">
+          <li><strong>Variant-level separator rules:</strong> <code>_variantMeta</code> in plate-types.json defines systematic separators for specific plate designs (e.g. Arizona 1996 legacy plates always have a bullet separator). If a variant match is found, the design-level separator overrides model-inferred values.</li>
+          <li><strong>Pattern-based spacing override:</strong> Known sequential plate formats (e.g. California "1ABC234", "ABC1234") never have spaces. If plate_number matches a known pattern, all separators are stripped from formatted string.</li>
+          <li><strong>Hallucinated per-character spacing:</strong> If every "group" in the formatted string is a single character (e.g. "R O K E R I J"), it's collapsed. Exception: short all-letter vanity plates (≤3 chars like "V X D") are preserved.</li>
+          <li><strong>Truncation confidence cap:</strong> If <code>potentially_truncated</code> is true, confidence is capped at 0.7.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details>
+      <summary>Steps 11–17: Derivation</summary>
+      <div class="detail-body">
+        <ol start="26">
+          <li><strong>Derive separators:</strong> Scan <code>plate_number_formatted</code> (source of truth) for space, ·, •, and - characters to build the <code>separators</code> array. Force <code>separator_source: null</code> when no separators present.</li>
+          <li><strong>Clean symbols_in_lpn:</strong> Remove nulls, empty strings, and common false positives from the symbols array. Preserve <code>null</code> (unknown) vs <code>[]</code> (confirmed none).</li>
+          <li><strong>Remove vertical_text from symbols:</strong> If vertical_text characters appear in symbols_in_lpn, remove them.</li>
+          <li><strong>Sync vertical_text_position:</strong> Force to <code>null</code> when no vertical text exists.</li>
+          <li><strong>Derive vertical_text_type:</strong> DP/DV/DPE/DVE → <code>"plate_suffix"</code>. State name matches → <code>"state_name"</code>. Otherwise → <code>"decorative"</code> or <code>null</code>.</li>
+          <li><strong>Derive disabled_type:</strong> Maps vertical_text suffix to human-readable type: DP→"Disabled Person", DV→"Disabled Veteran", DPE→"Disabled Person (Exempt)", DVE→"Disabled Veteran (Exempt)". Does NOT override design_type (they're separate fields).</li>
+          <li><strong>Sanitize design_type:</strong> Strip bracket-wrapped category headers (e.g. "[Standard Plates]" → null). Strip trailing bracket annotations.</li>
+          <li><strong>variant_hint → design_type promotion:</strong> If <code>variant_hint</code> matches a valid taxonomy entry for the state but <code>design_type</code> is still generic (e.g. "Standard Passenger Vehicle"), the hint is promoted to design_type.</li>
+          <li><strong>Derive registration_current:</strong> Compares expiration_month + expiration_year against today's date. Returns "Yes" (still valid through end of expiration month), "No" (expired), or "Unknown" (insufficient data).</li>
+        </ol>
+      </div>
+    </details>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Model Routing <span class="badge badge-sys">System</span></h2>
+
+    <h3>Supported Providers</h3>
+    <table>
+      <tr><th>Provider</th><th>Routing</th><th>Auth</th><th>Max Tokens</th></tr>
+      <tr><td>🖥️ LM Studio (Local)</td><td>Browser → server.js proxy → <code>192.168.0.65:1234</code></td><td><code>Bearer lm-studio</code></td><td>1024</td></tr>
+      <tr><td>✨ Google Gemini</td><td>Browser → direct CORS call to <code>generativelanguage.googleapis.com</code></td><td><code>Bearer &lt;API key&gt;</code></td><td>2048</td></tr>
+    </table>
+
+    <h3>Remote Proxy Chain</h3>
+    <p>When accessed from <code>oswaldjpickles.from-ca.com</code>:</p>
+    <pre>Browser → oswaldjpickles.from-ca.com/Platez/api/* 
+       → 192.168.0.65:8765 (Mac server.js)
+       → 192.168.0.65:1234 (LM Studio)</pre>
+    <p>Gemini calls bypass the proxy entirely — they go directly to Google's API from the browser.</p>
+
+    <h3>Model List Fetching</h3>
+    <ul>
+      <li><strong>LM Studio:</strong> <code>GET /lm-models</code> → proxied to LM Studio's <code>/v1/models</code> endpoint. Returns available models dynamically.</li>
+      <li><strong>Gemini:</strong> Hardcoded list of vision-capable models (2.5 Flash, 2.5 Pro, 2.0 Flash, 2.0 Flash Lite).</li>
+    </ul>
+
+    <h3>Settings Persistence</h3>
+    <p>All settings (provider, model, API key, LM Studio URL) are saved to <code>localStorage</code> under the key <code>platez_settings</code> and restored on page load.</p>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Image Processing <span class="badge badge-sys">System</span></h2>
+
+    <h3>Upload Processing</h3>
+    <ul>
+      <li>Resize to max 1024px on longest dimension (preserves aspect ratio)</li>
+      <li>Convert to JPEG at 0.92 quality</li>
+      <li>Stored as base64 data URL for model API calls</li>
+    </ul>
+
+    <h3>Crop Functions</h3>
+    <table>
+      <tr><th>Function</th><th>Region</th><th>Scale</th><th>Contrast</th><th>Brightness</th><th>Saturation</th><th>Used By</th></tr>
+      <tr><td><code>cropCorner()</code></td><td>30% W × 30% H from corner</td><td>4×</td><td>2.2</td><td>1.1</td><td>1.5</td><td>Pass 2a (stickers)</td></tr>
+      <tr><td><code>cropEdge()</code></td><td>55% W × 100% H from edge</td><td>3×</td><td>2.0</td><td>1.1</td><td>1.3</td><td>Pass 4 (vertical text)</td></tr>
+    </table>
+    <p class="note">Both functions render via off-screen canvas with CSS filter applied before drawImage(). Output is JPEG at 0.95 quality.</p>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Logging <span class="badge badge-sys">System</span></h2>
+
+    <h3>Server-Side Logs</h3>
+    <table>
+      <tr><th>File</th><th>Format</th><th>Content</th></tr>
+      <tr><td><code>logs/runs.log</code></td><td>Appended text lines</td><td>One-line summary: timestamp, plate, state, truncated, rejected vertical text</td></tr>
+      <tr><td><code>logs/run-*.json</code></td><td>Individual JSON files</td><td>Full analysis result + <code>_timestamp</code>, <code>_provider</code>, <code>_model</code>, <code>_verification</code></td></tr>
+    </table>
+
+    <h3>Feedback Entries</h3>
+    <p>When a user submits feedback, a JSON file is created with <code>"_type": "feedback"</code>, the feedback text, and the full run data attached as <code>"run"</code>. Feedback is also stored in <code>localStorage</code> for export.</p>
+
+    <h3>Log Entry Fields</h3>
+    <pre>{
+  ...analysisData,
+  "_timestamp": "2026-05-19T21:17:19.076Z",
+  "_provider": "lmstudio | gemini",
+  "_model":    "qwen/qwen2.5-vl-7b | gemini-2.5-flash",
+  "_verification": {
+    "corrections_reported": [...],
+    "discordance": [...],
+    "verified": true | false
+  }
+}</pre>
+
+    <!-- ════════════════════════════════════════════ -->
+    <h2>Version History</h2>
+
+    <div id="version-history">
+      <!-- Versions are rendered by JS from the VERSIONS array -->
+    </div>
+
+  </div>
+
+  <script>
+    const PIPELINE_DOC_VERSION = '1.0.0';
+    const PIPELINE_DOC_DATE = '2026-05-19';
+
+    const VERSIONS = [
+      {
+        version: '1.0.0',
+        date: '2026-05-19',
+        changes: [
+          'Initial pipeline documentation',
+          '5-pass analysis pipeline with verification (Pass 5)',
+          'Modular AI provider support (LM Studio local, Google Gemini)',
+          'Post-processing pipeline with 30+ normalization, validation, and derivation steps',
+          'Discordance detection between pre-verification and post-verification states',
+          'Verification protection rules: no null-outs, no false truncation flags',
+          'Corner crop sticker reading with anti-hallucination (sticker_visible gate)',
+          'Edge crop vertical text reading with independent per-side model calls',
+          'Design classification with taxonomy injection and variant_hint forwarding',
+          'Hallucinated per-character spacing detection and collapse',
+          'variant_hint → design_type promotion in post-processing',
+          'Settings persistence via localStorage',
+          'Logging with provider/model metadata and verification discordance'
+        ]
+      }
+    ];
+
+    // Render version label
+    document.getElementById('version-label').textContent = `v${PIPELINE_DOC_VERSION} — ${PIPELINE_DOC_DATE}`;
+    document.getElementById('doc-version').textContent = `v${PIPELINE_DOC_VERSION}`;
+
+    // Render version history
+    const historyEl = document.getElementById('version-history');
+    historyEl.innerHTML = VERSIONS.map(v => `
+      <div class="version-entry">
+        <h4>Version ${v.version} — ${v.date}</h4>
+        <ul>${v.changes.map(c => `<li>${c}</li>`).join('')}</ul>
+      </div>
+    `).join('');
+
+    // Drawer
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const drawer = document.getElementById('drawer');
+    const drawerOverlay = document.getElementById('drawer-overlay');
+
+    function openDrawer() {
+      drawer.classList.add('open');
+      drawerOverlay.classList.add('open');
+      hamburgerBtn.classList.add('open');
+    }
+    function closeDrawer() {
+      drawer.classList.remove('open');
+      drawerOverlay.classList.remove('open');
+      hamburgerBtn.classList.remove('open');
+    }
+    hamburgerBtn.addEventListener('click', () => drawer.classList.contains('open') ? closeDrawer() : openDrawer());
+    drawerOverlay.addEventListener('click', closeDrawer);
+  </script>
+</body>
+</html>
