@@ -15,6 +15,7 @@ sed -i '' "s|v__BUILD_TS__|v${TS}|" "$SRC_DIR/index.html"
 $SCP "$SRC_DIR/index.html" "$DEST/index.html"
 $SCP "$SRC_DIR/admin.html" "$DEST/admin.html"
 $SCP "$SRC_DIR/pipeline.html" "$DEST/pipeline.html"
+$SCP "$SRC_DIR/benchmark.html" "$DEST/benchmark.html"
 $SCP "$SRC_DIR/review.html" "$DEST/review.html"
 $SCP "$SRC_DIR/data/plate-types.json" "$DEST/data/plate-types.json"
 

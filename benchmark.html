@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Platez — Accuracy Benchmark</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3452;
+      --accent: #4f7eff; --text: #e8eaf6; --muted: #7b82a8;
+      --success: #3dd68c; --warn: #ffb938; --error: #ff5f72;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .topnav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 52px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 14px; }
+    .topnav-title { font-size: 1.1rem; font-weight: 700; }
+    .topnav-title span { color: var(--accent); }
+    .topnav-right { margin-left: auto; font-size: 0.8rem; color: var(--muted); }
+
+    .hamburger { background: none; border: none; cursor: pointer; padding: 6px; display: flex; flex-direction: column; gap: 5px; border-radius: 6px; }
+    .hamburger:hover { background: var(--surface2); }
+    .hamburger span { display: block; width: 22px; height: 2px; background: var(--text); border-radius: 2px; }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; }
+    .drawer-overlay.open { display: block; }
+    .drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: var(--surface); border-right: 1px solid var(--border); z-index: 400; transform: translateX(-100%); transition: transform 0.22s; display: flex; flex-direction: column; }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header { padding: 18px 20px 14px; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--border); }
+    .drawer-nav { display: flex; flex-direction: column; padding: 10px 0; }
+    .drawer-item { display: flex; align-items: center; padding: 12px 20px; gap: 10px; color: var(--text); text-decoration: none; font-size: 0.92rem; border-left: 3px solid transparent; }
+    .drawer-item:hover { background: var(--surface2); }
+    .drawer-item.active { border-left-color: var(--accent); color: var(--accent); background: var(--surface2); }
+
+    .content { padding-top: 72px; max-width: 960px; margin: 0 auto; padding-left: 1.5rem; padding-right: 1.5rem; padding-bottom: 4rem; }
+
+    h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.3rem; }
+    h1 span { color: var(--accent); }
+    .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 7px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .status-msg { padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1.5rem; font-size: 0.85rem; }
+
+    /* ── Summary cards ─────────────────────── */
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 2rem; }
+    .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+    .summary-card .big { font-size: 2rem; font-weight: 800; }
+    .summary-card .label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+    .green { color: var(--success); }
+    .yellow { color: var(--warn); }
+    .red { color: var(--error); }
+
+    /* ── Accuracy table ────────────────────── */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; font-size: 0.85rem; }
+    th { text-align: left; padding: 10px 14px; background: var(--surface2); color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 14px; border-bottom: 1px solid rgba(46,52,82,0.4); }
+    tr:hover td { background: rgba(79,126,255,0.04); }
+    .acc-bar { display: inline-block; height: 6px; border-radius: 3px; margin-left: 8px; vertical-align: middle; }
+    .pct { font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    /* ── Breakdown tables ──────────────────── */
+    h2 { font-size: 1.1rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+
+    .no-data { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+    .no-data .icon { font-size: 2.5rem; margin-bottom: 8px; }
+
+    /* ── Failure breakdown ─────────────────── */
+    .failure-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 2rem; }
+    .failure-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+    .failure-card .count { font-size: 1.4rem; font-weight: 800; color: var(--warn); min-width: 36px; }
+    .failure-card .type { font-size: 0.8rem; color: var(--text); }
+
+    /* ── Filter bar ────────────────────────── */
+    .filter-bar { display: flex; gap: 10px; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .filter-bar select, .filter-bar input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 0.82rem; outline: none; }
+  </style>
+</head>
+<body>
+  <nav class="topnav">
+    <button class="hamburger" id="hamburger-btn" aria-label="Menu"><span></span><span></span><span></span></button>
+    <span class="topnav-title">Plate<span>z</span></span>
+    <span class="topnav-right" id="topnav-info"></span>
+  </nav>
+
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">Navigation</div>
+    <nav class="drawer-nav">
+      <a class="drawer-item" href="index.html">🔍 Analyzer</a>
+      <a class="drawer-item" href="index.html?screen=settings">⚙️ Settings</a>
+      <a class="drawer-item" href="admin.html">🏷 Plate Type Admin</a>
+      <a class="drawer-item" href="pipeline.html">📋 Pipeline Docs</a>
+      <a class="drawer-item" href="review.html">🔬 Run Review</a>
+      <a class="drawer-item active" href="benchmark.html">📊 Benchmark</a>
+    </nav>
+  </aside>
+
+  <div class="content">
+    <h1>Accuracy <span>Benchmark</span></h1>
+    <p class="subtitle">Per-field accuracy metrics from ground-truth labeled runs</p>
+
+    <div id="status" class="status-msg">Loading runs…</div>
+
+    <div id="results" style="display:none;">
+
+      <!-- Summary -->
+      <div class="summary-grid" id="summary-grid"></div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <select id="f-provider"><option value="">All providers</option><option value="lmstudio">LM Studio</option><option value="gemini">Gemini</option></select>
+        <select id="f-plate-type"><option value="">All plate types</option><option value="sequential">Sequential</option><option value="vanity">Vanity</option></select>
+        <select id="f-disabled"><option value="">All</option><option value="yes">Disabled only</option><option value="no">Non-disabled only</option></select>
+        <select id="f-state"><option value="">All states</option></select>
+        <button class="btn btn-primary" onclick="runBenchmark()">↻ Recalculate</button>
+      </div>
+
+      <!-- Per-field accuracy -->
+      <h2>Per-Field Accuracy</h2>
+      <table id="field-table">
+        <thead><tr><th>Field</th><th>Correct</th><th>Total</th><th>Accuracy</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <!-- Model comparison -->
+      <h2>Model Comparison</h2>
+      <table id="model-table">
+        <thead><tr><th>Model</th><th>Runs</th><th>Plate # Exact</th><th>State</th><th>Design Type</th><th>Overall</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <!-- Failure type breakdown -->
+      <h2>Failure Type Breakdown</h2>
+      <div class="failure-grid" id="failure-grid"></div>
+
+      <!-- Per-run details -->
+      <h2>Per-Run Results</h2>
+      <table id="run-table">
+        <thead><tr><th>Plate</th><th>Model</th><th>Fields Correct</th><th>Fields Wrong</th><th>Wrong Fields</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="no-data" class="no-data" style="display:none;">
+      <div class="icon">📊</div>
+      <p>No ground-truth labeled runs yet.</p>
+      <p style="font-size:0.82rem; margin-top:6px;">Use the <a href="review.html" style="color:var(--accent);">Run Review</a> page to label runs, then come back here.</p>
+    </div>
+  </div>
+
+  <script>
+    // ── Config ────────────────────────────────
+    const isRemote = !window.location.hostname.match(/localhost|127\.|192\.168\./);
+    const API = isRemote ? '/Platez' : '';
+
+    // ── Drawer ────────────────────────────────
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const drawer = document.getElementById('drawer');
+    const drawerOverlay = document.getElementById('drawer-overlay');
+    hamburgerBtn.addEventListener('click', () => drawer.classList.contains('open') ? closeDrawer() : openDrawer());
+    drawerOverlay.addEventListener('click', closeDrawer);
+    function openDrawer() { drawer.classList.add('open'); drawerOverlay.classList.add('open'); hamburgerBtn.classList.add('open'); }
+    function closeDrawer() { drawer.classList.remove('open'); drawerOverlay.classList.remove('open'); hamburgerBtn.classList.remove('open'); }
+
+    // ── Fields to benchmark ───────────────────
+    const BENCH_FIELDS = [
+      { key: 'plate_number', label: 'Plate Number', compare: 'exact' },
+      { key: 'plate_number_formatted', label: 'Formatted', compare: 'exact' },
+      { key: 'state', label: 'State', compare: 'exact' },
+      { key: 'design_type', label: 'Design Type', compare: 'exact' },
+      { key: 'expiration_month', label: 'Exp. Month', compare: 'exact' },
+      { key: 'expiration_year', label: 'Exp. Year', compare: 'exact' },
+      { key: 'is_disabled', label: 'Disabled', compare: 'exact' },
+      { key: 'vertical_text', label: 'Vertical Text', compare: 'exact' },
+    ];
+
+    // ── State ─────────────────────────────────
+    let allFiles = [];
+    let runs = [];       // original analysis runs
+    let gtEntries = [];  // ground truth corrections
+    let pairs = [];      // { run, gt } matched pairs
+
+    // ── Load ──────────────────────────────────
+    async function loadAll() {
+      const res = await fetch(`${API}/logs`);
+      const files = await res.json();
+
+      const allData = [];
+      const batchSize = 20;
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize);
+        const results = await Promise.allSettled(
+          batch.map(async f => {
+            const r = await fetch(`${API}/logs/${f}`);
+            return { filename: f, data: await r.json() };
+          })
+        );
+        results.forEach(r => { if (r.status === 'fulfilled') allData.push(r.value); });
+      }
+
+      runs = allData.filter(d => !d.data._type || d.data._type === 'run');
+      gtEntries = allData.filter(d => d.data._type === 'ground_truth' || d.data.ground_truth === true);
+
+      // Match GT entries to their original runs
+      pairs = [];
+      gtEntries.forEach(gt => {
+        // Find the original run this GT was derived from
+        const origFile = gt.data._original_file;
+        const origRun = origFile ? runs.find(r => r.filename === origFile) : null;
+        if (origRun) {
+          pairs.push({ run: origRun.data, gt: gt.data, filename: origRun.filename });
+        }
+      });
+
+      // Also include runs that were marked GT directly (in-place, no correction file)
+      runs.forEach(r => {
+        if (r.data.ground_truth && !pairs.some(p => p.filename === r.filename)) {
+          pairs.push({ run: r.data, gt: r.data, filename: r.filename });
+        }
+      });
+
+      // Populate state filter
+      const states = new Set(pairs.map(p => p.gt.state).filter(Boolean));
+      const stateSelect = document.getElementById('f-state');
+      states.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        stateSelect.appendChild(opt);
+      });
+
+      document.getElementById('status').style.display = 'none';
+      document.getElementById('topnav-info').textContent = `${pairs.length} labeled pairs`;
+
+      if (pairs.length === 0) {
+        document.getElementById('no-data').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('results').style.display = 'block';
+      runBenchmark();
+    }
+
+    // ── Benchmark ─────────────────────────────
+    function runBenchmark() {
+      const provFilter = document.getElementById('f-provider').value;
+      const typeFilter = document.getElementById('f-plate-type').value;
+      const disabledFilter = document.getElementById('f-disabled').value;
+      const stateFilter = document.getElementById('f-state').value;
+
+      let filtered = pairs.filter(p => {
+        if (provFilter && p.run._provider !== provFilter) return false;
+        if (stateFilter && p.gt.state !== stateFilter) return false;
+        if (disabledFilter === 'yes' && !p.gt.is_disabled) return false;
+        if (disabledFilter === 'no' && p.gt.is_disabled) return false;
+        if (typeFilter === 'sequential') {
+          // Has digits = sequential
+          if (!/\d/.test(p.gt.plate_number || '')) return false;
+        }
+        if (typeFilter === 'vanity') {
+          if (/\d/.test(p.gt.plate_number || '')) return false;
+        }
+        return true;
+      });
+
+      // Per-field accuracy
+      const fieldStats = {};
+      BENCH_FIELDS.forEach(f => { fieldStats[f.key] = { correct: 0, total: 0, wrong: [] }; });
+
+      // Per-run results
+      const runResults = [];
+
+      // Per-model stats
+      const modelStats = {};
+
+      // Failure type counts
+      const failureCounts = {};
+
+      filtered.forEach(({ run, gt }) => {
+        const runCorrect = [];
+        const runWrong = [];
+        const model = run._model || 'unknown';
+        if (!modelStats[model]) modelStats[model] = { runs: 0, fields: {} };
+        modelStats[model].runs++;
+
+        BENCH_FIELDS.forEach(f => {
+          const runVal = getVal(run, f.key);
+          const gtVal = getVal(gt, f.key);
+
+          // Skip if GT doesn't have this field (can't evaluate)
+          if (gtVal === undefined || gtVal === null) return;
+
+          fieldStats[f.key].total++;
+          if (!modelStats[model].fields[f.key]) modelStats[model].fields[f.key] = { correct: 0, total: 0 };
+          modelStats[model].fields[f.key].total++;
+
+          const match = JSON.stringify(normalize(runVal)) === JSON.stringify(normalize(gtVal));
+          if (match) {
+            fieldStats[f.key].correct++;
+            modelStats[model].fields[f.key].correct++;
+            runCorrect.push(f.key);
+          } else {
+            fieldStats[f.key].wrong.push({ plate: gt.plate_number, run: runVal, gt: gtVal });
+            runWrong.push(f.label);
+          }
+        });
+
+        runResults.push({
+          plate: gt.plate_number_formatted || gt.plate_number || '?',
+          model: model.includes('/') ? model.split('/').pop() : model,
+          correct: runCorrect.length,
+          wrong: runWrong.length,
+          wrongFields: runWrong
+        });
+
+        // Failure types from discordance
+        (run._verification?.discordance || []).forEach(d => {
+          const ft = d.failure_type || 'other';
+          failureCounts[ft] = (failureCounts[ft] || 0) + 1;
+        });
+      });
+
+      // ── Render summary ──────────────────────
+      const totalFields = Object.values(fieldStats).reduce((s, f) => s + f.total, 0);
+      const correctFields = Object.values(fieldStats).reduce((s, f) => s + f.correct, 0);
+      const overallPct = totalFields > 0 ? (correctFields / totalFields * 100).toFixed(1) : '—';
+      const platePct = fieldStats.plate_number.total > 0
+        ? (fieldStats.plate_number.correct / fieldStats.plate_number.total * 100).toFixed(1) : '—';
+
+      document.getElementById('summary-grid').innerHTML = `
+        <div class="summary-card"><div class="big">${filtered.length}</div><div class="label">Labeled Pairs</div></div>
+        <div class="summary-card"><div class="big ${pctClass(overallPct)}">${overallPct}%</div><div class="label">Overall Accuracy</div></div>
+        <div class="summary-card"><div class="big ${pctClass(platePct)}">${platePct}%</div><div class="label">Plate # Exact Match</div></div>
+        <div class="summary-card"><div class="big">${Object.keys(modelStats).length}</div><div class="label">Models Tested</div></div>
+      `;
+
+      // ── Render field table ──────────────────
+      const tbody = document.querySelector('#field-table tbody');
+      tbody.innerHTML = BENCH_FIELDS.map(f => {
+        const s = fieldStats[f.key];
+        const pct = s.total > 0 ? (s.correct / s.total * 100).toFixed(1) : '—';
+        const barW = s.total > 0 ? (s.correct / s.total * 120) : 0;
+        const cls = pctClass(pct);
+        return `<tr>
+          <td>${f.label}</td>
+          <td>${s.correct}</td>
+          <td>${s.total}</td>
+          <td class="pct ${cls}">${pct}%</td>
+          <td><span class="acc-bar ${cls}" style="width:${barW}px;background:${cls === 'green' ? 'var(--success)' : cls === 'yellow' ? 'var(--warn)' : 'var(--error)'}"></span></td>
+        </tr>`;
+      }).join('');
+
+      // ── Render model table ──────────────────
+      const mtbody = document.querySelector('#model-table tbody');
+      mtbody.innerHTML = Object.entries(modelStats).map(([model, ms]) => {
+        const short = model.includes('/') ? model.split('/').pop() : model;
+        const pnPct = ms.fields.plate_number?.total > 0
+          ? (ms.fields.plate_number.correct / ms.fields.plate_number.total * 100).toFixed(1) + '%' : '—';
+        const stPct = ms.fields.state?.total > 0
+          ? (ms.fields.state.correct / ms.fields.state.total * 100).toFixed(1) + '%' : '—';
+        const dtPct = ms.fields.design_type?.total > 0
+          ? (ms.fields.design_type.correct / ms.fields.design_type.total * 100).toFixed(1) + '%' : '—';
+        const allCorr = Object.values(ms.fields).reduce((s, f) => s + f.correct, 0);
+        const allTot = Object.values(ms.fields).reduce((s, f) => s + f.total, 0);
+        const ovPct = allTot > 0 ? (allCorr / allTot * 100).toFixed(1) + '%' : '—';
+        return `<tr><td>${esc(short)}</td><td>${ms.runs}</td><td class="pct">${pnPct}</td><td class="pct">${stPct}</td><td class="pct">${dtPct}</td><td class="pct">${ovPct}</td></tr>`;
+      }).join('');
+
+      // ── Render failure grid ─────────────────
+      const FAILURE_LABELS = {
+        char_confusion: '🔤 Char Confusion', vertical_text_missed: '🔍 VT Missed',
+        vertical_text_hallucinated: '👻 VT Hallucinated', sticker_missed: '🔍 Sticker Missed',
+        sticker_hallucinated: '👻 Sticker Hallucinated', sticker_misread: '❌ Sticker Misread',
+        design_misclassified: '🏷 Design Error', spacing_error: '↔ Spacing Error',
+        bleed_not_stripped: '🩸 Bleed Error', other: '⚠️ Other'
+      };
+      const fgrid = document.getElementById('failure-grid');
+      const sorted = Object.entries(failureCounts).sort((a, b) => b[1] - a[1]);
+      fgrid.innerHTML = sorted.length > 0 ? sorted.map(([ft, count]) => {
+        return `<div class="failure-card"><div class="count">${count}</div><div class="type">${FAILURE_LABELS[ft] || ft}</div></div>`;
+      }).join('') : '<p style="color:var(--muted);grid-column:1/-1;">No verification discordance in labeled runs</p>';
+
+      // ── Render per-run table ────────────────
+      const rtbody = document.querySelector('#run-table tbody');
+      rtbody.innerHTML = runResults.map(r => {
+        return `<tr>
+          <td>${esc(r.plate)}</td>
+          <td>${esc(r.model)}</td>
+          <td class="green">${r.correct}</td>
+          <td class="${r.wrong > 0 ? 'red' : 'green'}">${r.wrong}</td>
+          <td style="font-size:0.78rem;color:var(--muted);">${r.wrongFields.join(', ') || '—'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // ── Helpers ───────────────────────────────
+    function getVal(data, key) {
+      if (key.includes('.')) {
+        const parts = key.split('.');
+        let v = data;
+        for (const p of parts) v = v?.[p];
+        return v;
+      }
+      return data[key];
+    }
+
+    function normalize(v) {
+      if (v === null || v === undefined) return null;
+      if (typeof v === 'string') return v.toLowerCase().trim();
+      return v;
+    }
+
+    function pctClass(pct) {
+      if (pct === '—') return '';
+      const n = parseFloat(pct);
+      if (n >= 90) return 'green';
+      if (n >= 70) return 'yellow';
+      return 'red';
+    }
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    // ── Filter listeners ─────────────────────
+    ['f-provider', 'f-plate-type', 'f-disabled', 'f-state'].forEach(id => {
+      document.getElementById(id).addEventListener('change', runBenchmark);
+    });
+
+    // ── Init ─────────────────────────────────
+    loadAll();
+  </script>
+</body>
+</html>
