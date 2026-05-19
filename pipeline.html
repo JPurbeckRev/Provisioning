@@ -456,21 +456,37 @@
     <h3>Protection Rules</h3>
     <p>The verification pass has guardrails to prevent regression:</p>
     <ul>
-      <li><strong>No null-outs:</strong> If a previous pass found a non-null value, the verification pass can change it to a different value but cannot erase it to <code>null</code>.</li>
+      <li><strong>No null-outs (default):</strong> If a previous pass found a non-null value, the verification pass can change it to a different value but cannot erase it to <code>null</code>.</li>
+      <li><strong>PLZ-03 carve-out:</strong> Null-outs ARE allowed when the verification pass has high confidence (≥ 0.85) AND the original value had low confidence (≤ 0.6). This primarily applies to <code>vertical_text</code>, <code>expiration_month</code>, and <code>expiration_year</code>. All null-out decisions are logged with confidence values.</li>
       <li><strong>No false truncation:</strong> Cannot flip <code>potentially_truncated</code> from <code>false</code> to <code>true</code>.</li>
       <li><strong>Prompt reinforcement:</strong> The model is explicitly told not to second-guess uncertain-but-reasonable reads.</li>
     </ul>
 
-    <h3>Discordance Detection</h3>
-    <p>Before the verification pass runs, the current analysis state is snapshotted. After verification completes and values are applied, a field-by-field diff is computed. The result is stored in the <code>_verification</code> metadata:</p>
+    <h3>Discordance Detection &amp; Failure Taxonomy</h3>
+    <p>Before the verification pass runs, the current analysis state is snapshotted. After verification completes and values are applied, a field-by-field diff is computed. Each discordance is classified with a <code>failure_type</code> for structured analysis:</p>
+    <table>
+      <tr><th>Failure Type</th><th>Description</th><th>Example</th></tr>
+      <tr><td><code>char_confusion</code></td><td>Same-length plate number differing only in confusable chars (0/O, 1/I/L, 5/S, 8/B, 2/Z)</td><td>B8E5848 → BME5848</td></tr>
+      <tr><td><code>bleed_not_stripped</code></td><td>Plate number has extra chars from DP/DV suffix bleed</td><td>DPR8042 → R8042</td></tr>
+      <tr><td><code>vertical_text_missed</code></td><td>Pass 1–4 didn't detect vertical text, Pass 5 found it</td><td>null → DP</td></tr>
+      <tr><td><code>vertical_text_hallucinated</code></td><td>Earlier pass detected VT that Pass 5 says isn't there</td><td>DP → null</td></tr>
+      <tr><td><code>sticker_missed</code></td><td>Expiration value was null, verification found it</td><td>null → 11</td></tr>
+      <tr><td><code>sticker_hallucinated</code></td><td>Expiration value existed, verification erased it</td><td>2013 → null</td></tr>
+      <tr><td><code>sticker_misread</code></td><td>Both passes found a value but they disagree</td><td>11 → 10</td></tr>
+      <tr><td><code>design_misclassified</code></td><td>Design type changed between passes</td><td>Standard → Whale Tail</td></tr>
+      <tr><td><code>spacing_error</code></td><td>Separator or formatted string changed</td><td>R O K E R I J → ROKERIJ</td></tr>
+    </table>
     <pre>{
   "_verification": {
-    "corrections_reported": ["field1", "field2"],  // what the model said it changed
-    "discordance": [                                // actual computed diff
-      { "field": "plate_number", "before": "PR8042", "after": "R8042" },
-      { "field": "design_type", "before": "Standard", "after": "Whale Tail" }
+    "corrections_reported": ["field1", "field2"],
+    "discordance": [
+      { "field": "plate_number", "before": "PR8042", "after": "R8042", "failure_type": "bleed_not_stripped" },
+      { "field": "design_type", "before": "Standard", "after": "Whale Tail", "failure_type": "design_misclassified" }
     ],
-    "verified": false  // true if no discordance found
+    "null_outs": [
+      { "field": "expiration_year", "before": 2013, "after": null, "origConf": 0.9, "verConf": 0.5, "action": "blocked" }
+    ],
+    "verified": false
   }
 }</pre>
 
@@ -656,10 +672,25 @@
   </div>
 
   <script>
-    const PIPELINE_DOC_VERSION = '1.0.0';
+    const PIPELINE_DOC_VERSION = '1.1.0';
     const PIPELINE_DOC_DATE = '2026-05-19';
 
     const VERSIONS = [
+      {
+        version: '1.1.0',
+        date: '2026-05-19',
+        changes: [
+          'PLZ-03: Pass 5 null-out carve-out — allows verification to erase values when verify confidence ≥ 0.85 AND original confidence ≤ 0.6',
+          'PLZ-03: All null-out decisions (allowed/blocked) logged with confidence values in _verification.null_outs',
+          'PLZ-03: Verification prompt now requests per-field confidence (expiration_month, expiration_year, vertical_text)',
+          'PLZ-01: Structured failure taxonomy on every discordance entry — failure_type enum classifies root cause',
+          'PLZ-01: Failure types: char_confusion, vertical_text_missed/hallucinated, sticker_missed/hallucinated/misread, design_misclassified, spacing_error, bleed_not_stripped',
+          'PLZ-01: Failure type tags displayed in discordance UI with icons',
+          'PLZ-04: Token usage logging — prompt/completion/total tracked per callModel() invocation',
+          'PLZ-04: Context pressure warning when prompt tokens exceed 80% of 4096 (LM Studio only)',
+          'PLZ-04: Cumulative token tracker across all passes, included in log entries as _tokenUsage'
+        ]
+      },
       {
         version: '1.0.0',
         date: '2026-05-19',
