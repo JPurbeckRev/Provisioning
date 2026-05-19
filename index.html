@@ -120,6 +120,7 @@
       position: relative;
     }
     .drop-zone.has-image { padding: 0; border: none; overflow: hidden; background: transparent; }
+    .crop-dimmer { position: absolute; background: rgba(0,0,0,0.55); pointer-events: none; }
     .drop-zone-content { transition: opacity 0.2s; }
     .drop-zone.has-image .drop-zone-content { display: none; }
 
@@ -555,6 +556,19 @@
         <div id="preview-wrap">
           <img id="preview-img" src="" alt="License plate preview" />
           <button id="clear-btn" title="Remove image">✕</button>
+          <button id="crop-btn" title="Crop to plate" style="position:absolute;top:8px;right:40px;background:rgba(0,0,0,0.6);border:none;color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.75rem;display:none;">✂ Crop</button>
+          <!-- Crop overlay -->
+          <div id="crop-overlay" style="display:none;position:absolute;inset:0;cursor:crosshair;z-index:10;">
+            <div id="crop-selection" style="position:absolute;border:2px dashed var(--accent);background:rgba(79,126,255,0.15);display:none;pointer-events:none;"></div>
+            <div id="crop-dimmer-top" class="crop-dimmer"></div>
+            <div id="crop-dimmer-bottom" class="crop-dimmer"></div>
+            <div id="crop-dimmer-left" class="crop-dimmer"></div>
+            <div id="crop-dimmer-right" class="crop-dimmer"></div>
+          </div>
+          <div id="crop-actions" style="display:none;position:absolute;bottom:8px;left:50%;transform:translateX(-50%);z-index:11;display:none;gap:6px;">
+            <button id="crop-apply-btn" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:0.8rem;font-weight:600;">Apply Crop</button>
+            <button id="crop-cancel-btn" style="background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:0.8rem;">Cancel</button>
+          </div>
         </div>
       </div>
 
@@ -958,6 +972,7 @@
           imageMime = 'image/jpeg';
           previewImg.src = dataUrl; // show original for preview
           previewWrap.style.display = 'block';
+          document.getElementById('crop-btn').style.display = 'block';
           dropZone.classList.add('has-image');
           analyzeBtn.disabled = false;
           clearError();
@@ -985,6 +1000,8 @@
       imageBase64 = null;
       previewImg.src = '';
       previewWrap.style.display = 'none';
+      document.getElementById('crop-btn').style.display = 'none';
+      exitCropMode();
       dropZone.classList.remove('has-image');
       fileInput.value = '';
       analyzeBtn.disabled = true;
@@ -992,6 +1009,167 @@
       document.getElementById('main-card').classList.remove('has-results');
       statusMsg.style.display = 'none';
       clearError();
+    }
+
+    // ── PLZ-05: Manual plate crop ────────────────────────────────
+    // Store the original full-size data URL so we can re-crop from source
+    let originalImageDataUrl = null;
+
+    // Patch handleFile to save original
+    const _origHandleFile = handleFile;
+    // (We already save dataUrl in handleFile's reader.onload — patch previewImg.src setter)
+
+    const cropBtn = document.getElementById('crop-btn');
+    const cropOverlay = document.getElementById('crop-overlay');
+    const cropSelection = document.getElementById('crop-selection');
+    const cropActions = document.getElementById('crop-actions');
+    const cropApplyBtn = document.getElementById('crop-apply-btn');
+    const cropCancelBtn = document.getElementById('crop-cancel-btn');
+    let cropStart = null;
+    let cropRect = null;
+    let inCropMode = false;
+
+    cropBtn.addEventListener('click', enterCropMode);
+    cropCancelBtn.addEventListener('click', exitCropMode);
+    cropApplyBtn.addEventListener('click', applyCrop);
+
+    function enterCropMode() {
+      inCropMode = true;
+      cropOverlay.style.display = 'block';
+      cropActions.style.display = 'flex';
+      cropBtn.style.display = 'none';
+      clearBtn.style.display = 'none';
+      analyzeBtn.disabled = true;
+      cropSelection.style.display = 'none';
+      cropRect = null;
+      updateDimmers(null);
+    }
+
+    function exitCropMode() {
+      inCropMode = false;
+      cropOverlay.style.display = 'none';
+      cropActions.style.display = 'none';
+      cropSelection.style.display = 'none';
+      if (imageBase64) {
+        cropBtn.style.display = 'block';
+        clearBtn.style.display = 'flex';
+        analyzeBtn.disabled = false;
+      }
+      updateDimmers(null);
+    }
+
+    function updateDimmers(rect) {
+      const dt = document.getElementById('crop-dimmer-top');
+      const db = document.getElementById('crop-dimmer-bottom');
+      const dl = document.getElementById('crop-dimmer-left');
+      const dr = document.getElementById('crop-dimmer-right');
+      if (!rect) {
+        [dt, db, dl, dr].forEach(d => d.style.display = 'none');
+        return;
+      }
+      const cw = cropOverlay.offsetWidth, ch = cropOverlay.offsetHeight;
+      // Top dimmer
+      dt.style.display = 'block';
+      dt.style.top = '0'; dt.style.left = '0'; dt.style.width = cw + 'px'; dt.style.height = rect.top + 'px';
+      // Bottom dimmer
+      db.style.display = 'block';
+      db.style.top = (rect.top + rect.height) + 'px'; db.style.left = '0'; db.style.width = cw + 'px'; db.style.height = (ch - rect.top - rect.height) + 'px';
+      // Left dimmer
+      dl.style.display = 'block';
+      dl.style.top = rect.top + 'px'; dl.style.left = '0'; dl.style.width = rect.left + 'px'; dl.style.height = rect.height + 'px';
+      // Right dimmer
+      dr.style.display = 'block';
+      dr.style.top = rect.top + 'px'; dr.style.left = (rect.left + rect.width) + 'px'; dr.style.width = (cw - rect.left - rect.width) + 'px'; dr.style.height = rect.height + 'px';
+    }
+
+    cropOverlay.addEventListener('mousedown', e => {
+      if (!inCropMode) return;
+      const r = cropOverlay.getBoundingClientRect();
+      cropStart = { x: e.clientX - r.left, y: e.clientY - r.top };
+      cropSelection.style.display = 'block';
+    });
+
+    cropOverlay.addEventListener('mousemove', e => {
+      if (!cropStart) return;
+      const r = cropOverlay.getBoundingClientRect();
+      const cx = Math.max(0, Math.min(e.clientX - r.left, r.width));
+      const cy = Math.max(0, Math.min(e.clientY - r.top, r.height));
+      const x = Math.min(cropStart.x, cx), y = Math.min(cropStart.y, cy);
+      const w = Math.abs(cx - cropStart.x), h = Math.abs(cy - cropStart.y);
+      cropRect = { left: x, top: y, width: w, height: h };
+      cropSelection.style.left = x + 'px';
+      cropSelection.style.top = y + 'px';
+      cropSelection.style.width = w + 'px';
+      cropSelection.style.height = h + 'px';
+      updateDimmers(cropRect);
+    });
+
+    cropOverlay.addEventListener('mouseup', () => { cropStart = null; });
+    cropOverlay.addEventListener('mouseleave', () => { cropStart = null; });
+
+    // Touch support for mobile
+    cropOverlay.addEventListener('touchstart', e => {
+      if (!inCropMode) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      const r = cropOverlay.getBoundingClientRect();
+      cropStart = { x: t.clientX - r.left, y: t.clientY - r.top };
+      cropSelection.style.display = 'block';
+    }, { passive: false });
+
+    cropOverlay.addEventListener('touchmove', e => {
+      if (!cropStart) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      const r = cropOverlay.getBoundingClientRect();
+      const cx = Math.max(0, Math.min(t.clientX - r.left, r.width));
+      const cy = Math.max(0, Math.min(t.clientY - r.top, r.height));
+      const x = Math.min(cropStart.x, cx), y = Math.min(cropStart.y, cy);
+      const w = Math.abs(cx - cropStart.x), h = Math.abs(cy - cropStart.y);
+      cropRect = { left: x, top: y, width: w, height: h };
+      cropSelection.style.left = x + 'px';
+      cropSelection.style.top = y + 'px';
+      cropSelection.style.width = w + 'px';
+      cropSelection.style.height = h + 'px';
+      updateDimmers(cropRect);
+    }, { passive: false });
+
+    cropOverlay.addEventListener('touchend', () => { cropStart = null; });
+
+    function applyCrop() {
+      if (!cropRect || cropRect.width < 10 || cropRect.height < 10) {
+        exitCropMode();
+        return;
+      }
+      // Map crop rect from preview display coords to actual image pixels
+      const imgEl = previewImg;
+      const dispW = imgEl.offsetWidth, dispH = imgEl.offsetHeight;
+      const natW = imgEl.naturalWidth, natH = imgEl.naturalHeight;
+      const scaleX = natW / dispW, scaleY = natH / dispH;
+
+      const sx = Math.round(cropRect.left * scaleX);
+      const sy = Math.round(cropRect.top * scaleY);
+      const sw = Math.round(cropRect.width * scaleX);
+      const sh = Math.round(cropRect.height * scaleY);
+
+      // Create cropped image via canvas, then re-run the 1024px resize pipeline
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1024;
+        const scale = Math.min(1, MAX_DIM / Math.max(sw, sh));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(sw * scale);
+        canvas.height = Math.round(sh * scale);
+        canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+        const jpegUrl = canvas.toDataURL('image/jpeg', 0.92);
+        imageBase64 = jpegUrl.split(',')[1];
+        imageMime = 'image/jpeg';
+        // Update preview to show cropped version
+        previewImg.src = jpegUrl;
+        console.log(`[Platez] Crop applied: ${sw}×${sh}px from (${sx},${sy}) → ${canvas.width}×${canvas.height}px`);
+        exitCropMode();
+      };
+      img.src = previewImg.src;
     }
 
     // ── Plate history (localStorage) ────────────────────────────────
