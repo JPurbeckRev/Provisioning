@@ -83,6 +83,10 @@
     .nav-btn:hover { background: var(--accent-glow); border-color: var(--accent); }
     .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
+    /* ── Image container ───────────────────── */
+    .run-image { margin-bottom: 16px; text-align: center; background: #000; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+    .run-image img { max-width: 100%; max-height: 300px; display: block; margin: 0 auto; object-fit: contain; }
+
     /* ── Alert boxes ───────────────────────── */
     .alert { border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.82rem; display: flex; align-items: flex-start; gap: 8px; }
     .alert-gt { background: rgba(61,214,140,0.08); border: 1px solid var(--success); color: var(--success); }
@@ -427,6 +431,11 @@
           <button class="nav-btn" onclick="selectByIdx(${selectedIdx + 1})" ${nextDisabled}>Next →</button>
         </div>
       </div>`;
+
+      // Image
+      if (d._image_file) {
+        html += `<div class="run-image"><img src="${API}/logs/${d._image_file}" alt="Scanned Plate" /></div>`;
+      }
 
       // Alerts
       if (d.ground_truth || d._type === 'ground_truth') {

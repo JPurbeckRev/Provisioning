@@ -2164,7 +2164,15 @@ Reply ONLY with JSON:
         setTimeout(() => { statusMsg.style.display = 'none'; statusMsg.style.opacity = '1'; }, 1600);
 
         // Log the run to server (route through remote proxy when not local)
-        const logEntry = { ...data, _timestamp: new Date().toISOString(), _provider: providerSelect.value, _model: modelId, _tokenUsage: tokenTracker };
+        const logEntry = { 
+          ...data, 
+          _timestamp: new Date().toISOString(), 
+          _provider: providerSelect.value, 
+          _model: modelId, 
+          _tokenUsage: tokenTracker,
+          _image_base64: imageBase64,
+          _image_mime: imageMime
+        };
         const isLocal = window.location.hostname.match(/localhost|127\.|192\.168\./);
         const logUrl = isLocal ? '/log' : '/Platez/log';
         fetch(logUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(logEntry) })
@@ -2957,6 +2965,31 @@ Reply ONLY with JSON:
 
     // ── Version stamp ─────────────────────────────────────────────
     document.getElementById('version-stamp').textContent = 'v__BUILD_TS__';
+  </script>
+  <script>
+    // Provisioner API Hook
+    window.addEventListener('message', async (e) => {
+      if (e.data && e.data.type === 'RUN_PLATE_OCR') {
+        try {
+          // Set inputs headless
+          imageBase64 = e.data.base64;
+          document.getElementById('apiUrl').value = e.data.apiUrl || 'http://localhost:8765';
+          document.getElementById('model').value = e.data.modelId || 'qwen/qwen2.5-vl-7b';
+          
+          // Override renderResults to intercept the output instead of drawing it
+          const originalRender = renderResults;
+          renderResults = (data, rawStr) => {
+            e.source.postMessage({ type: 'PLATE_OCR_RESULT', data: data }, e.origin);
+            renderResults = originalRender; // restore
+          };
+          
+          // Trigger the run
+          await analyze();
+        } catch (err) {
+          e.source.postMessage({ type: 'PLATE_OCR_ERROR', error: err.message }, e.origin);
+        }
+      }
+    });
   </script>
 </body>
 </html>

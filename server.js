@@ -44,6 +44,17 @@ http.createServer((req, res) => {
       try {
         const entry = JSON.parse(Buffer.concat(body).toString());
         const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        
+        if (entry._image_base64) {
+          const imgData = entry._image_base64.replace(/^data:image\/\w+;base64,/, '');
+          const ext = entry._image_mime === 'image/jpeg' ? '.jpg' : entry._image_mime === 'image/png' ? '.png' : '.webp';
+          const imgName = `img-${ts}${ext}`;
+          fs.writeFileSync(path.join(LOG_DIR, imgName), Buffer.from(imgData, 'base64'));
+          entry._image_file = imgName;
+          delete entry._image_base64;
+          delete entry._image_mime;
+        }
+
         const logFile = path.join(LOG_DIR, `run-${ts}.json`);
         fs.writeFileSync(logFile, JSON.stringify(entry, null, 2));
         // Also append a summary line to the rolling log
@@ -99,18 +110,20 @@ http.createServer((req, res) => {
     return;
   }
 
-  // GET /logs/<filename> — return a specific log file
+  // GET /logs/<filename> — return a specific log file or image
   if (req.method === 'GET' && req.url.startsWith('/logs/')) {
     const filename = path.basename(req.url.slice(6));
-    if (!filename.endsWith('.json') || filename.includes('..')) {
+    if (filename.includes('..')) {
       res.writeHead(400, { 'Content-Type': 'application/json', ...CORS });
       res.end(JSON.stringify({ error: 'Invalid filename' }));
       return;
     }
     const filePath = path.join(LOG_DIR, filename);
     try {
-      const data = fs.readFileSync(filePath, 'utf8');
-      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS });
+      const data = fs.readFileSync(filePath);
+      const ext = path.extname(filePath);
+      const ctype = MIME[ext] || 'application/json';
+      res.writeHead(200, { 'Content-Type': ctype, ...CORS });
       res.end(data);
     } catch (e) {
       res.writeHead(404, { 'Content-Type': 'application/json', ...CORS });

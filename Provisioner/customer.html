@@ -244,14 +244,48 @@
       return alert("Please fill all fields and upload both images.");
     }
 
+    document.getElementById('submitBtn').style.display = 'none';
+    const loader = document.getElementById('loader');
+    loader.style.display = 'block';
+    loader.innerText = 'Extracting Plate Data (Pass 1 of 5)...';
+
+    // Run advanced Plate OCR via hidden Platez iframe
+    const platezIframe = document.createElement('iframe');
+    platezIframe.src = '/Platez/index.html';
+    platezIframe.style.display = 'none';
+    document.body.appendChild(platezIframe);
+
+    const plateOcrResult = await new Promise((resolve, reject) => {
+      window.addEventListener('message', function listener(e) {
+        if (e.data && e.data.type === 'PLATE_OCR_RESULT') {
+          window.removeEventListener('message', listener);
+          resolve(e.data.data);
+        } else if (e.data && e.data.type === 'PLATE_OCR_ERROR') {
+          window.removeEventListener('message', listener);
+          reject(new Error(e.data.error));
+        }
+      });
+      platezIframe.onload = () => {
+        platezIframe.contentWindow.postMessage({
+          type: 'RUN_PLATE_OCR',
+          base64: plateBase64,
+          apiUrl: window.location.origin
+        }, '*');
+      };
+      setTimeout(() => reject(new Error("Plate OCR timeout")), 120000);
+    }).catch(err => {
+      console.error("Plate OCR failed", err);
+      return null;
+    });
+
+    loader.innerText = 'Submitting Provisioning Request...';
+
     const payload = {
       customerInput: { State: state, LPN: lpn, VIN: vin },
       plateImageBase64: plateBase64,
-      regDocImageBase64: regBase64
+      regDocImageBase64: regBase64,
+      plateOcrPreProcessed: plateOcrResult // Pass the pre-processed Plate data to backend
     };
-
-    document.getElementById('submitBtn').style.display = 'none';
-    document.getElementById('loader').style.display = 'block';
 
     try {
       const res = await fetch('/Provisioner/api/v1/queue', {

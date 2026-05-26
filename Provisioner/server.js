@@ -117,17 +117,27 @@ http.createServer((req, res) => {
 
         // Background VLM processing (Option B)
         try {
-          const plateB64 = fs.readFileSync(path.join(UPLOADS_DIR, plateFilename)).toString('base64');
           const regB64 = fs.readFileSync(path.join(UPLOADS_DIR, regFilename)).toString('base64');
           
-          // Run sequentially to prevent LM Studio concurrent 500 errors
-          const plateOcr = await plateOcrService.processPlateImage(plateB64);
+          // Use pre-processed plate OCR from frontend Platez pipeline, or fallback
+          const plateOcr = payload.plateOcrPreProcessed || await plateOcrService.processPlateImage(fs.readFileSync(path.join(UPLOADS_DIR, plateFilename)).toString('base64'));
+          
           const regDocResult = await regDocService.processRegistrationDocument(regB64);
           
-          record.plateOcr = plateOcr;
+          // Map Platez payload format to Provisioner format
+          record.plateOcr = {
+            plate_string: plateOcr.plate_number || plateOcr.plate_string,
+            formatted_lpn: plateOcr.plate_number_formatted || plateOcr.formatted_lpn,
+            state: plateOcr.state,
+            design_type: plateOcr.design_type,
+            vertical_text: plateOcr.vertical_text,
+            vertical_text_position: plateOcr.vertical_text_position,
+            is_disabled: plateOcr.is_disabled,
+            disabled_type: plateOcr.disabled_type
+          };
           record.regDocOcr = regDocResult.data || {};
           const validation = crossReferenceService.validateProvisioningData(
-            customerInput, plateOcr, record.regDocOcr
+            customerInput, record.plateOcr, record.regDocOcr
           );
           record.crossReference = validation;
           record.status = validation.routingStatus === 'AUTO_POPULATE' ? 'AUTOPOPULATE' : 'REQUIRESATTENTION';
