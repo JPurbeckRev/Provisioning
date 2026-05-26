@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Provisioning Request Review</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; margin: 0; color: #333; }
+    .header { background: #001529; color: white; padding: 15px 30px; display: flex; align-items: center; justify-content: space-between;}
+    .content { padding: 30px; display: flex; gap: 30px;}
+    .left-panel { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .right-panel { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    .form-row { display: flex; margin-bottom: 15px; align-items: center; }
+    .form-row label { flex: 0 0 150px; font-weight: 500; font-size: 14px; color: #555;}
+    .form-row input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;}
+    .form-row input.mismatch { border-color: #cf1322; background: #fff1f0; }
+    .image-box { margin-bottom: 20px; }
+    .image-box img { max-width: 100%; border: 1px solid #ddd; border-radius: 4px; }
+    .actions { margin-top: 20px; text-align: right; border-top: 1px solid #eee; padding-top: 20px;}
+    .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; margin-left: 10px;}
+    .btn-cancel { background: #fff; border: 1px solid #ddd; }
+    .btn-override { background: #faad14; color: white; }
+    .btn-process { background: #1890ff; color: white; }
+    .alert { background: #fff1f0; border: 1px solid #ffa39e; padding: 15px; border-radius: 4px; color: #cf1322; margin-bottom: 20px; display: none;}
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div style="font-weight: bold; font-size: 18px; letter-spacing: 2px;"><a href="/Provisioner/queue.html" style="color:white; text-decoration:none;">&larr; Back to Queue</a></div>
+  <div style="font-size: 14px;">Provisioning Request Review</div>
+</div>
+
+<div class="content">
+  <div class="left-panel">
+    <h2>Submitted Images</h2>
+    <div class="image-box">
+      <div style="font-weight: bold; margin-bottom: 5px;">License Plate</div>
+      <img id="plateImg" src="">
+    </div>
+    <div class="image-box">
+      <div style="font-weight: bold; margin-bottom: 5px;">Registration Document</div>
+      <img id="regImg" src="">
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <h2 id="reqTitle">Provisioning Request - Loading...</h2>
+    
+    <div id="alertBox" class="alert">
+      <strong>Requires Attention!</strong> Cross-reference validation failed.
+      <ul id="warningList" style="margin: 5px 0 0 0; padding-left: 20px;"></ul>
+    </div>
+
+    <div class="form-row"><label>Customer State</label><input type="text" id="f_state" readonly></div>
+    <div class="form-row"><label>Customer LPN</label><input type="text" id="f_lpn" readonly></div>
+    <div class="form-row"><label>Customer VIN</label><input type="text" id="f_vin" readonly></div>
+    
+    <h3 style="margin-top: 30px; font-size: 14px; color: #999; border-bottom: 1px solid #eee;">Extracted & Auto-Populated Data</h3>
+    
+    <div class="form-row"><label>Extracted Plate</label><input type="text" id="e_plate"></div>
+    <div class="form-row"><label>Design Type</label><input type="text" id="e_design"></div>
+    <div class="form-row"><label>Formatted LPN</label><input type="text" id="e_formatted_lpn"></div>
+    <div class="form-row"><label>Vertical Text</label><input type="text" id="e_vert_text"></div>
+    <div class="form-row"><label>Vert Text Pos</label><input type="text" id="e_vert_pos"></div>
+    <div class="form-row"><label>Disabled</label><input type="text" id="e_disabled"></div>
+    <div class="form-row"><label>Disabled Type</label><input type="text" id="e_disabled_type"></div>
+    <div class="form-row"><label>Extracted VIN</label><input type="text" id="e_vin"></div>
+    <div class="form-row"><label>Expiration Date</label><input type="text" id="e_exp"></div>
+    <div class="form-row"><label>Make / Year</label><input type="text" id="e_make_year"></div>
+    <div class="form-row"><label>Owner First Name</label><input type="text" id="e_fname"></div>
+    <div class="form-row"><label>Owner Last Name</label><input type="text" id="e_lname"></div>
+    <div class="form-row"><label>Address Line 1</label><input type="text" id="e_add1"></div>
+    <div class="form-row"><label>City / State / Zip</label><input type="text" id="e_csz"></div>
+
+    <div class="actions">
+      <button class="btn btn-cancel" onclick="window.location.href='/Provisioner/queue.html'">Cancel</button>
+      <button class="btn btn-override" onclick="alert('Override saved to feedback loop.')">Override & Log</button>
+      <button class="btn btn-process" onclick="alert('Provisioning Processed!')">Process</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function detectDataUri(b64) {
+    if (!b64) return '';
+    if (b64.startsWith('/9j/')) return `data:image/jpeg;base64,${b64}`;
+    if (b64.startsWith('iVBOR')) return `data:image/png;base64,${b64}`;
+    if (b64.startsWith('UklGR')) return `data:image/webp;base64,${b64}`;
+    return `data:image/jpeg;base64,${b64}`;
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const reqId = urlParams.get('id');
+
+  async function loadData() {
+    const res = await fetch('/Provisioner/api/v1/queue/' + reqId);
+    const data = await res.json();
+    
+    if(data.error) return alert("Request not found");
+
+    document.getElementById('reqTitle').innerText = 'Provisioning Request - ' + data.plateSerialNumber + ' (' + data.status + ')';
+    document.getElementById('plateImg').src = '/Provisioner' + data.plateImageUrl;
+    document.getElementById('regImg').src = '/Provisioner' + data.regDocImageUrl;
+
+    // Customer Input
+    document.getElementById('f_state').value = data.customerInput.State;
+    document.getElementById('f_lpn').value = data.customerInput.LPN;
+    document.getElementById('f_vin').value = data.customerInput.VIN;
+
+    // Extracted Data
+    if(data.plateOcr) {
+      document.getElementById('e_plate').value = data.plateOcr.plate_string || "";
+      document.getElementById('e_design').value = data.plateOcr.design_type || "";
+      document.getElementById('e_formatted_lpn').value = data.plateOcr.formatted_lpn || "";
+      document.getElementById('e_vert_text').value = data.plateOcr.vertical_text || "";
+      document.getElementById('e_vert_pos').value = data.plateOcr.vertical_text_position || "";
+      document.getElementById('e_disabled').value = data.plateOcr.is_disabled ? "Yes" : "No";
+      document.getElementById('e_disabled_type').value = data.plateOcr.disabled_type || "";
+    }
+    if(data.regDocOcr) {
+      document.getElementById('e_vin').value = data.regDocOcr.VIN || "";
+      document.getElementById('e_exp').value = data.regDocOcr["Expiration Date"] || "";
+      document.getElementById('e_make_year').value = (data.regDocOcr.Make || "") + ' / ' + (data.regDocOcr.Year || "");
+      document.getElementById('e_fname').value = data.regDocOcr["Owner First Name"] || "";
+      document.getElementById('e_lname').value = data.regDocOcr["Owner Last Name"] || "";
+      document.getElementById('e_add1').value = data.regDocOcr["Registration Address1"] || "";
+      document.getElementById('e_csz').value = (data.regDocOcr["Registration City"] || "") + ', ' + (data.regDocOcr["Registration State"] || "") + ' ' + (data.regDocOcr["Registration Zipcode"] || "");
+    }
+
+    // Warnings & Highlighting
+    if (data.status === "REQUIRESATTENTION" && data.crossReference?.warnings) {
+      document.getElementById('alertBox').style.display = 'block';
+      const ul = document.getElementById('warningList');
+      data.crossReference.warnings.forEach(w => {
+        const li = document.createElement('li');
+        li.innerText = w;
+        ul.appendChild(li);
+
+        if(w.includes('VIN')) document.getElementById('e_vin').classList.add('mismatch');
+        if(w.includes('LPN')) document.getElementById('e_plate').classList.add('mismatch');
+      });
+    }
+  }
+
+  if(reqId) loadData();
+</script>
+
+</body>
+</html>

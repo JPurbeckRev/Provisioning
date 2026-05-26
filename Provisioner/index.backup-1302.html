@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Platez — License Plate Reader</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3452;
+      --accent: #4f7eff;
+      --accent-glow: rgba(79, 126, 255, 0.18);
+      --text: #e8eaf6;
+      --muted: #7b82a8;
+      --success: #3dd68c;
+      --warn: #ffb938;
+      --error: #ff5f72;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 4rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header h1 span { color: var(--accent); }
+
+    header p {
+      color: var(--muted);
+      margin-top: 0.4rem;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .drop-zone .icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .drop-zone p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .drop-zone p strong { color: var(--text); }
+
+    /* Preview */
+    #preview-wrap {
+      display: none;
+      margin-top: 1.25rem;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #preview-wrap img {
+      width: 100%;
+      display: block;
+      border-radius: 10px;
+    }
+
+    #clear-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.6);
+      border: none;
+      color: #fff;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Settings toggle */
+    details {
+      margin-top: 1.25rem;
+    }
+
+    summary {
+      color: var(--muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    summary:hover { color: var(--text); }
+
+    .settings-grid {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 0.85rem;
+    }
+
+    label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    /* Analyze button */
+    #analyze-btn {
+      margin-top: 1.5rem;
+      width: 100%;
+      padding: 0.85rem;
+      background: var(--accent);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    #analyze-btn:hover:not(:disabled) { opacity: 0.88; }
+    #analyze-btn:active:not(:disabled) { transform: scale(0.98); }
+    #analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Results */
+    #results {
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    #results h2 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .result-grid {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .result-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.7rem 1rem;
+    }
+
+    .result-row .label {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .result-row .value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      text-align: right;
+    }
+
+    .result-row .value.highlight { color: var(--accent); }
+    .result-row .value.unknown { color: var(--muted); font-style: italic; font-weight: 400; }
+
+    /* Error */
+    #error-msg {
+      display: none;
+      margin-top: 1.25rem;
+      background: rgba(255, 95, 114, 0.1);
+      border: 1px solid rgba(255, 95, 114, 0.35);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      font-size: 0.88rem;
+      color: var(--error);
+      white-space: pre-wrap;
+    }
+
+    /* Raw JSON toggle */
+    #raw-toggle {
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+
+    #raw-json {
+      display: none;
+      margin-top: 0.5rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Plate<span>z</span> 🚗</h1>
+    <p>Upload a license plate photo and let the local LLM do the rest.</p>
+  </header>
+
+  <div class="card">
+
+    <!-- Drop zone -->
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept="image/*" />
+      <div class="icon">📸</div>
+      <p><strong>Click to upload</strong> or drag & drop</p>
+      <p>PNG, JPG, WEBP, HEIC supported</p>
+    </div>
+
+    <!-- Image preview -->
+    <div id="preview-wrap">
+      <img id="preview-img" src="" alt="License plate preview" />
+      <button id="clear-btn" title="Remove image">✕</button>
+    </div>
+
+    <!-- Settings -->
+    <details id="settings">
+      <summary>⚙️ Settings</summary>
+      <div class="settings-grid">
+        <div>
+          <label for="api-url">LLM API Base URL</label>
+          <input type="text" id="api-url" value="http://127.0.0.1:1234" />
+        </div>
+        <div>
+          <label for="model-id">Model ID</label>
+          <input type="text" id="model-id" value="qwen/qwen2.5-vl-7b" />
+        </div>
+      </div>
+    </details>
+
+    <!-- Analyze button -->
+    <button id="analyze-btn" disabled>Analyze Plate</button>
+
+    <!-- Error -->
+    <div id="error-msg"></div>
+
+    <!-- Results -->
+    <div id="results">
+      <h2>Extracted Info</h2>
+      <div class="result-grid">
+        <!-- Core ID -->
+        <div class="result-row">
+          <span class="label">Plate Number</span>
+          <span class="value highlight" id="r-number">—</span>
+        </div>
+        <div class="result-row">
+          <span class="label">Formatted / Spacing</span>
+          <span class="value" id="r-formatted">—</span>
+        </div>
+        <div class="result-row">
+          <span class="label">Separators</span>
+          <span class="value" id="r-separators">—</span>
+        </div>
+        <div class="result-row" id="r-spacing-notes-row">
+          <span class="label">Spacing Notes</span>
+          <span class="value" id="r-spacing-notes">—</span>
+        </div>
+        <div class="result-row">
+          <span class="label">Symbols in LPN</span>
+          <span class="value" id="r-symbols">—</span>
+        </div>
+        <!-- Location & Design -->
+        <div class="result-row">
+          <span class="label">State / Region</span>
+          <span class="value" id="r-state">—</span>
+        </div>
+        <div class="result-row">
+          <span class="label">Design Type</span>
+          <span class="value" id="r-design">—</span>
+        </div>
+        <!-- Expiration -->
+        <div class="result-row">
+          <span class="label">Expiration Month</span>
+          <span class="value" id="r-month">—</span>
+        </div>
+        <div class="result-row">
+          <span class="label">Expiration Year</span>
+          <span class="value" id="r-year">—</span>
+        </div>
+        <!-- Disabled -->
+        <div class="result-row">
+          <span class="label">Disabled Plate</span>
+          <span class="value" id="r-disabled">—</span>
+        </div>
+        <div class="result-row">
+          <span class="label">DP Logo Position</span>
+          <span class="value" id="r-dp-logo-pos">—</span>
+        </div>
+        <div class="result-row">
+          <span class="label">Vertical Text</span>
+          <span class="value" id="r-vertical-text">—</span>
+        </div>
+        <div class="result-row">
+          <span class="label">Vertical Text Position</span>
+          <span class="value" id="r-vertical-text-pos">—</span>
+        </div>
+      </div>
+      <button id="raw-toggle">Show raw JSON</button>
+      <pre id="raw-json"></pre>
+    </div>
+
+  </div>
+
+  <script>
+    const dropZone   = document.getElementById('drop-zone');
+    const fileInput  = document.getElementById('file-input');
+    const previewWrap = document.getElementById('preview-wrap');
+    const previewImg = document.getElementById('preview-img');
+    const clearBtn   = document.getElementById('clear-btn');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const errorMsg   = document.getElementById('error-msg');
+    const results    = document.getElementById('results');
+    const rawToggle  = document.getElementById('raw-toggle');
+    const rawJson    = document.getElementById('raw-json');
+    const apiUrlInput = document.getElementById('api-url');
+    const modelIdInput = document.getElementById('model-id');
+
+    let imageBase64 = null;
+    let imageMime = 'image/jpeg';
+
+    // ── Drag events ──────────────────────────────────────────────
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
+
+    clearBtn.addEventListener('click', resetImage);
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) return showError('Please upload an image file.');
+      const reader = new FileReader();
+      reader.onload = e => {
+        const dataUrl = e.target.result;
+        const img = new Image();
+        img.onload = () => {
+          // Normalize to JPEG via canvas (handles webp, heic, etc.)
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          const jpegUrl = canvas.toDataURL('image/jpeg', 0.95);
+          imageBase64 = jpegUrl.split(',')[1];
+          imageMime = 'image/jpeg';
+          previewImg.src = dataUrl; // show original for preview
+          previewWrap.style.display = 'block';
+          dropZone.style.display = 'none';
+          analyzeBtn.disabled = false;
+          clearError();
+          results.style.display = 'none';
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function resetImage() {
+      imageBase64 = null;
+      previewImg.src = '';
+      previewWrap.style.display = 'none';
+      dropZone.style.display = '';
+      fileInput.value = '';
+      analyzeBtn.disabled = true;
+      results.style.display = 'none';
+      clearError();
+    }
+
+    // ── Raw JSON toggle ───────────────────────────────────────────
+    rawToggle.addEventListener('click', () => {
+      const open = rawJson.style.display === 'block';
+      rawJson.style.display = open ? 'none' : 'block';
+      rawToggle.textContent = open ? 'Show raw JSON' : 'Hide raw JSON';
+    });
+
+    // ── Analyze ───────────────────────────────────────────────────
+    analyzeBtn.addEventListener('click', analyze);
+
+    async function analyze() {
+      if (!imageBase64) return;
+
+      analyzeBtn.disabled = true;
+      analyzeBtn.innerHTML = '<span class="spinner"></span>Analyzing…';
+      clearError();
+      results.style.display = 'none';
+
+      const apiBase = (apiUrlInput.value || 'http://127.0.0.1:1234').replace(/\/$/, '');
+      const modelId = modelIdInput.value.trim() || 'qwen/qwen3.6-35b-a3b';
+
+      const prompt = `You are a precise license plate reader. Analyze the image and follow every rule exactly.
+
+STEP 1 — VERTICAL EDGE TEXT
+Inspect all four edges for text printed perpendicular to the plate (rotated 90 degrees).
+This is rare: e.g. "DP" or "DV" printed sideways along one edge as part of the permanent plate design.
+Do NOT confuse with: the main plate number, state name, decorative text, or stickers.
+If you are not certain text is rotated 90 degrees on an edge, set vertical_text to null.
+
+STEP 2 — DISABLED/ISA LOGO
+Look for a wheelchair/ISA graphic. Set dp_logo_position to "left", "right", or "none".
+
+STEP 3 — PLATE NUMBER
+Read ONLY the large bold alphanumeric characters in the CENTER of the plate.
+Do NOT include: state name, city, slogans, decorative text, or any text found in Step 1.
+On disabled plates: DP/DV on the edge and the wheelchair icon are NOT part of the plate number.
+
+STEP 4 — EXPIRATION
+Find month and year from stickers or printed text. Convert: JAN=1 FEB=2 MAR=3 APR=4 MAY=5 JUN=6 JUL=7 AUG=8 SEP=9 OCT=10 NOV=11 DEC=12.
+Month/year go ONLY in expiration_month and expiration_year — NEVER in vertical_text.
+
+STEP 5 — SPACING AND SYMBOLS
+Encode separators in plate_number_formatted: full space = U+0020; half-space = U+00B7 middle dot; hyphen = -; no gap = characters run together.
+The separators array must exactly match what appears in plate_number_formatted.
+symbols_in_lpn: ONLY symbols occupying a character slot inline with the alphanumeric characters. Background art is never a symbol.
+
+Output ONLY valid JSON (no markdown, no code fences):
+
+{
+  "plate_number": "<Step 3 — center alphanumeric only>",
+  "plate_number_formatted": "<Step 5 — exact separator encoding>",
+  "separators": ["<must match plate_number_formatted: full-space | half-space | hyphen | none>"],
+  "spacing_notes": "<mixed/ambiguous only — otherwise null>",
+  "symbols_in_lpn": [],
+  "state": "<full state name>",
+  "design_type": "<visual style>",
+  "expiration_month": <integer 1-12 or null>,
+  "expiration_year": <4-digit integer or null>,
+  "is_disabled": <true or false>,
+  "dp_logo_position": "<left | right | none>",
+  "vertical_text": "<Step 1 — null if none or uncertain>",
+  "vertical_text_position": "<left | right | NA>"
+}`
+
+      const body = {
+        model: modelId,
+        max_tokens: 1024,
+        temperature: 0,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${imageMime};base64,${imageBase64}`
+                }
+              },
+              {
+                type: 'text',
+                text: prompt
+              }
+            ]
+          }
+        ]
+      };
+
+      try {
+        // Route through local proxy to avoid CORS issues
+        const proxyBase = window.location.origin;
+        const res = await fetch(`${proxyBase}/api/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer lm-studio' },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`HTTP ${res.status}: ${txt}`);
+        }
+
+        const data = await res.json();
+        const raw = data.choices?.[0]?.message?.content?.trim();
+
+        if (!raw) throw new Error('Model returned an empty response. It may not support vision input — try loading a vision-capable model (e.g. LLaVA, Qwen2-VL, Llama 3.2 Vision) in LM Studio.');
+
+        // Strip markdown fences if the model adds them anyway
+        const jsonStr = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+        let parsed;
+        try {
+          parsed = JSON.parse(jsonStr);
+        } catch {
+          throw new Error(`Could not parse model response as JSON:\n\n${raw}`);
+        }
+
+        renderResults(parsed, jsonStr);
+
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = 'Analyze Plate';
+      }
+    }
+
+    const MONTH_MAP = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+
+    function postProcess(data) {
+      const nullish = new Set(['null','n/a','na','none','']);
+
+      // 1. Normalize null-like strings
+      ['spacing_notes','vertical_text','plate_number','plate_number_formatted','dp_logo_position','vertical_text_position','design_type']
+        .forEach(k => { if (nullish.has(String(data[k]||'').toLowerCase().trim())) data[k] = null; });
+
+      // 2. dp_logo_position default
+      if (!data.dp_logo_position) data.dp_logo_position = 'none';
+
+      // 3. Infer is_disabled from dp_logo_position
+      if (data.dp_logo_position !== 'none') data.is_disabled = true;
+
+      // 4. Normalize vertical_text_position to allowed values
+      if (!['left','right'].includes(data.vertical_text_position)) data.vertical_text_position = 'NA';
+
+      // 5. Normalize expiration_month string → integer
+      if (typeof data.expiration_month === 'string') {
+        const key = data.expiration_month.toLowerCase().slice(0, 3);
+        data.expiration_month = MONTH_MAP[key] ?? null;
+      }
+
+      // 6. Move month/year out of vertical_text FIRST (before bleed strip runs)
+      //    Model sometimes puts "JAN California" or similar in vertical_text
+      if (data.vertical_text) {
+        const vt = data.vertical_text.trim();
+        const hasMonth = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i.test(vt);
+        const hasYear  = /\b(20\d{2})\b/.test(vt);
+        if (hasMonth || hasYear || /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d)/i.test(vt)) {
+          const mM = vt.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i);
+          const yM = vt.match(/\b(20\d{2})\b/);
+          if (mM && !data.expiration_month) data.expiration_month = MONTH_MAP[mM[1].toLowerCase()];
+          if (yM && !data.expiration_year)  data.expiration_year  = parseInt(yM[1]);
+          data.vertical_text = null;
+          data.vertical_text_position = 'NA';
+        }
+      }
+
+      // 7. Normalize plate_number_formatted
+      if (data.plate_number_formatted) {
+        data.plate_number_formatted = data.plate_number_formatted
+          .replace(/U\+0020/g, ' ').replace(/U\+00B7/g, '·').replace(/\u2027/g, '');
+        const noSep = data.plate_number_formatted.replace(/[\s·\-]/g, '');
+        if (data.plate_number && noSep.toUpperCase() === data.plate_number.toUpperCase() &&
+            data.plate_number_formatted.length > data.plate_number.length * 1.5)
+          data.plate_number_formatted = data.plate_number;
+      }
+
+      // 8. Strip DP/DV bleed from plate_number
+      //    Only use vertical_text as source if it looks like a disabled marker (1-3 alpha chars)
+      if (data.is_disabled && data.plate_number) {
+        const isMarker = v => v && /^[A-Z]{1,3}$/i.test(v.trim());
+        const vtRaw = isMarker(data.vertical_text) ? data.vertical_text : 'DP';
+        const dp = vtRaw.toUpperCase().replace(/\s/g, '');
+        for (let len = Math.min(dp.length, 2); len >= 1; len--) {
+          if (data.plate_number.toUpperCase().startsWith(dp.slice(-len))) {
+            const stripped = data.plate_number.slice(len);
+            if (stripped.length >= 3) {
+              data.plate_number = stripped;
+              if (data.plate_number_formatted)
+                data.plate_number_formatted = data.plate_number_formatted.slice(len).replace(/^[\s·\-]+/, '');
+            }
+            break;
+          }
+        }
+      }
+
+      // 9. Move month/year from vertical_text again (catches cases not caught in step 6)
+      if (data.vertical_text) {
+        const vt = data.vertical_text.trim();
+        if (/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d)/i.test(vt)) {
+          const mM = vt.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i);
+          const yM = vt.match(/\b(20\d{2})\b/);
+          if (mM && !data.expiration_month) data.expiration_month = MONTH_MAP[mM[1].toLowerCase()];
+          if (yM && !data.expiration_year)  data.expiration_year  = parseInt(yM[1]);
+          data.vertical_text = null;
+          data.vertical_text_position = 'NA';
+        }
+      }
+
+      // 10. Clear vertical_text if it duplicates plate_number
+      if (data.vertical_text && data.plate_number &&
+          data.vertical_text.replace(/[\s·\-]/g,'').toUpperCase() === data.plate_number.replace(/[\s·\-]/g,'').toUpperCase()) {
+        data.vertical_text = null;
+        data.vertical_text_position = 'NA';
+      }
+
+      // 11. Derive separators from plate_number_formatted (source of truth)
+      const fmt = data.plate_number_formatted || '';
+      const seps = [];
+      if (fmt.includes(' '))  seps.push('full-space');
+      if (fmt.includes('·'))  seps.push('half-space');
+      if (fmt.includes('-'))  seps.push('hyphen');
+      data.separators = seps.length ? seps : ['none'];
+
+      // 12. Clean symbols_in_lpn
+      if (Array.isArray(data.symbols_in_lpn))
+        data.symbols_in_lpn = data.symbols_in_lpn.filter(s => s && !nullish.has(s.toLowerCase().trim()) && !s.startsWith('<'));
+      else
+        data.symbols_in_lpn = [];
+
+      // 13. Remove vertical_text chars from symbols_in_lpn (e.g. "DV" bleed into symbols)
+      if (data.vertical_text && data.symbols_in_lpn.length) {
+        const vtChars = new Set(data.vertical_text.toUpperCase().replace(/\s/g,'').split(''));
+        data.symbols_in_lpn = data.symbols_in_lpn.filter(s => !vtChars.has(s.toUpperCase()));
+      }
+
+      // 14. If disabled plate detected but vertical_text still null, infer "DP" as default
+      //     (model consistently misses the rotated edge text — this is a known model limitation)
+      if (data.is_disabled && !data.vertical_text) {
+        data.vertical_text = 'DP';
+        data.vertical_text_position = data.dp_logo_position !== 'none' ? data.dp_logo_position : 'left';
+      }
+
+      return data;
+    }
+
+
+    function renderResults(data, rawStr) {
+      data = postProcess(data);
+      const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (val === null || val === undefined || val === '') {
+          el.textContent = 'Unknown';
+          el.className = 'value unknown';
+        } else {
+          el.textContent = val;
+          el.className = id === 'r-number' ? 'value highlight' : 'value';
+        }
+      };
+
+      set('r-number',    data.plate_number);
+      set('r-formatted', data.plate_number_formatted);
+      set('r-state',     data.state);
+      set('r-design',    data.design_type);
+      set('r-year',      data.expiration_year);
+      set('r-month',     data.expiration_month !== null && data.expiration_month !== undefined
+        ? new Date(2000, data.expiration_month - 1).toLocaleString('default', { month: 'long' })
+        : null);
+
+      // Separators
+      const seps = Array.isArray(data.separators) && data.separators.length > 0
+        ? data.separators.join(', ')
+        : null;
+      set('r-separators', seps);
+
+      // Spacing notes — hide row if null
+      const notesRow = document.getElementById('r-spacing-notes-row');
+      if (data.spacing_notes) {
+        set('r-spacing-notes', data.spacing_notes);
+        notesRow.style.display = 'flex';
+      } else {
+        notesRow.style.display = 'none';
+      }
+
+      // Symbols in LPN
+      const syms = Array.isArray(data.symbols_in_lpn) && data.symbols_in_lpn.length > 0
+        ? data.symbols_in_lpn.join(', ')
+        : null;
+      set('r-symbols', syms);
+
+      // Disabled plate
+      const disabledEl = document.getElementById('r-disabled');
+      disabledEl.textContent = data.is_disabled === true ? '♿ Yes' : 'No';
+      disabledEl.className = 'value';
+
+      set('r-dp-logo-pos',      data.dp_logo_position);
+      set('r-vertical-text',    data.vertical_text);
+      set('r-vertical-text-pos', data.vertical_text_position);
+
+      rawJson.textContent = JSON.stringify(data, null, 2);
+      rawJson.style.display = 'none';
+      rawToggle.textContent = 'Show raw JSON';
+
+      results.style.display = 'block';
+    }
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.style.display = 'block';
+    }
+
+    function clearError() {
+      errorMsg.textContent = '';
+      errorMsg.style.display = 'none';
+    }
+  </script>
+</body>
+</html>

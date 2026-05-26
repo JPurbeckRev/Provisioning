@@ -1,0 +1,16 @@
+# OS
+.DS_Store
+
+# Logs (tracked separately, not in git)
+logs/
+
+# Samples (large image files)
+Samples/
+
+# Test images
+*.jpg
+*.webp
+*.png
+
+# Node
+node_modules/

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RPLATE - Customer Provisioning</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 40px; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    h1 { margin-top: 0; color: #1a73e8; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: 500; }
+    input[type="text"], select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+    button { background: #1a73e8; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
+    button:hover { background: #1557b0; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .file-drop { border: 2px dashed #ddd; padding: 20px; text-align: center; border-radius: 4px; background: #fafafa; margin-bottom: 10px; cursor: pointer; }
+    .file-drop.dragover { border-color: #1a73e8; background: #e8f0fe; }
+    .preview { max-width: 100%; max-height: 200px; margin-top: 10px; display: none; }
+    .hidden { display: none; }
+    .loader { display: none; text-align: center; margin-top: 20px; font-weight: bold; color: #1a73e8; }
+    
+    /* Modal styles */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+    .modal { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+    .modal h2 { margin-top: 0; display: flex; justify-content: space-between; }
+    .modal-close { cursor: pointer; color: #999; }
+    .picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
+    .picker-item { border: 1px solid #ddd; border-radius: 4px; padding: 10px; cursor: pointer; text-align: center; transition: all 0.2s; }
+    .picker-item:hover { border-color: #1a73e8; background: #f8faff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .picker-item img { width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 5px; }
+    .picker-item .lpn { font-weight: bold; font-size: 14px; }
+    .picker-item .date { font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+
+<div id="pickerModal" class="modal-overlay">
+  <div class="modal">
+    <h2>
+      Select Previous Submission 
+      <span class="modal-close" onclick="document.getElementById('pickerModal').style.display='none'">&times;</span>
+    </h2>
+    <div id="pickerGrid" class="picker-grid">
+      <!-- items injected here -->
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 style="margin: 0; color: #1a73e8;">Activate Your RPLATE</h1>
+    <button id="loadRecentBtn" style="width: auto; background: #e8f0fe; color: #1a73e8; padding: 8px 15px; font-size: 14px;">Load Previous...</button>
+  </div>
+  <p>Step 1: Enter your vehicle details to begin provisioning.</p>
+
+  <div class="form-group">
+    <label>State</label>
+    <select id="state">
+      <option value="CA">California</option>
+      <option value="AZ">Arizona</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label>License Plate Number</label>
+    <div style="display: flex; gap: 10px;">
+      <input type="text" id="lpn" placeholder="e.g. 9NZJ274">
+      <button id="lookupVinBtn" style="width: auto;">Lookup VIN</button>
+    </div>
+  </div>
+
+  <div class="form-group" id="vinGroup">
+    <label>VIN (Vehicle Identification Number)</label>
+    <input type="text" id="vin" placeholder="17-character VIN">
+  </div>
+
+  <hr style="margin: 30px 0; border: 0; border-top: 1px solid #eee;">
+  <p>Step 2: Upload documents for verification.</p>
+
+  <div class="form-group">
+    <label>Photo of Metal License Plate</label>
+    <div class="file-drop" id="plateDrop" onclick="document.getElementById('plateInput').click()">
+      Click or Drag Image Here
+      <input type="file" id="plateInput" class="hidden" accept="image/*">
+    </div>
+    <img id="platePreview" class="preview">
+  </div>
+
+  <div class="form-group">
+    <label>Photo of Registration Document</label>
+    <div class="file-drop" id="regDrop" onclick="document.getElementById('regInput').click()">
+      Click or Drag Image Here
+      <input type="file" id="regInput" class="hidden" accept="image/*">
+    </div>
+    <img id="regPreview" class="preview">
+  </div>
+
+  <button id="submitBtn">Submit Provisioning Request</button>
+  <div id="loader" class="loader">Uploading and processing request...</div>
+  <div id="successMsg" class="hidden" style="color: green; font-weight: bold; text-align: center; margin-top: 20px;">Request submitted successfully!</div>
+</div>
+
+<script>
+  let plateBase64 = null;
+  let regBase64 = null;
+
+  document.getElementById('loadRecentBtn').addEventListener('click', async () => {
+    try {
+      document.getElementById('loadRecentBtn').innerText = 'Loading...';
+      const res = await fetch('/Provisioner/api/v1/queue');
+      const queue = await res.json();
+      if(queue && queue.length > 0) {
+        const grid = document.getElementById('pickerGrid');
+        grid.innerHTML = '';
+        
+        queue.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'picker-item';
+          const d = new Date(item.requestedDate);
+          div.innerHTML = `
+            <img src="/Provisioner${item.plateImageUrl}" alt="Plate">
+            <div class="lpn">${item.customerInput.LPN}</div>
+            <div class="date">${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+          `;
+          div.onclick = () => loadSubmission(item.id);
+          grid.appendChild(div);
+        });
+        
+        document.getElementById('pickerModal').style.display = 'flex';
+      } else {
+        alert("No previous submissions found.");
+      }
+    } catch(e) {
+      alert("Error loading submissions list.");
+    } finally {
+      document.getElementById('loadRecentBtn').innerText = 'Load Previous...';
+    }
+  });
+
+  async function loadSubmission(id) {
+    document.getElementById('pickerModal').style.display = 'none';
+    try {
+      const fullRes = await fetch('/Provisioner/api/v1/queue/' + id);
+      const data = await fullRes.json();
+      
+      document.getElementById('state').value = data.customerInput.State;
+      document.getElementById('lpn').value = data.customerInput.LPN;
+      document.getElementById('vin').value = data.customerInput.VIN;
+
+      const toBase64 = async (url) => {
+         const response = await fetch(url);
+         const blob = await response.blob();
+         return new Promise((resolve) => {
+           const reader = new FileReader();
+           reader.onloadend = () => resolve(reader.result);
+           reader.readAsDataURL(blob);
+         });
+      };
+
+      const pB64 = await toBase64('/Provisioner' + data.plateImageUrl);
+      plateBase64 = pB64.split(',')[1];
+      document.getElementById('platePreview').src = pB64;
+      document.getElementById('platePreview').style.display = 'block';
+      document.getElementById('plateDrop').style.display = 'none';
+
+      const rB64 = await toBase64('/Provisioner' + data.regDocImageUrl);
+      regBase64 = rB64.split(',')[1];
+      document.getElementById('regPreview').src = rB64;
+      document.getElementById('regPreview').style.display = 'block';
+      document.getElementById('regDrop').style.display = 'none';
+      
+    } catch(e) {
+      alert("Error loading submission details.");
+    }
+  }
+
+  function toBase64(file, callback) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const b64 = reader.result.replace(/^data:image\/\w+;base64,/, '');
+      callback(b64, reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  document.getElementById('plateInput').addEventListener('change', (e) => {
+    if(e.target.files[0]) {
+      toBase64(e.target.files[0], (b64, dataUrl) => {
+        plateBase64 = b64;
+        const img = document.getElementById('platePreview');
+        img.src = dataUrl;
+        img.style.display = 'block';
+      });
+    }
+  });
+
+  document.getElementById('regInput').addEventListener('change', (e) => {
+    if(e.target.files[0]) {
+      toBase64(e.target.files[0], (b64, dataUrl) => {
+        regBase64 = b64;
+        const img = document.getElementById('regPreview');
+        img.src = dataUrl;
+        img.style.display = 'block';
+      });
+    }
+  });
+
+  document.getElementById('lookupVinBtn').addEventListener('click', async () => {
+    const lpn = document.getElementById('lpn').value.trim();
+    const state = document.getElementById('state').value;
+    const btn = document.getElementById('lookupVinBtn');
+    if(!lpn) return alert("Enter LPN first");
+    
+    btn.innerText = "Loading...";
+    btn.disabled = true;
+    try {
+      // We route through /Provisioner/api/ to use the proxy
+      const res = await fetch(`/Provisioner/api/v1/vin-lookup/${state}/${lpn}?cb=${Date.now()}`);
+      if(res.ok) {
+        const data = await res.json();
+        if(data && data.licensePlateLookup && data.licensePlateLookup.vin) {
+          document.getElementById('vin').value = data.licensePlateLookup.vin;
+        } else {
+          alert("VIN not found for this plate. Please enter manually.");
+        }
+      } else if(res.status === 404) {
+        alert("Plate not found in public database. Please enter VIN manually.");
+      } else {
+        alert("Lookup unavailable. Please enter VIN manually.");
+      }
+    } catch(e) {
+      alert("Network error. Please enter VIN manually.");
+    }
+    btn.innerText = "Lookup VIN";
+    btn.disabled = false;
+  });
+
+  document.getElementById('submitBtn').addEventListener('click', async () => {
+    const state = document.getElementById('state').value;
+    const lpn = document.getElementById('lpn').value.trim();
+    const vin = document.getElementById('vin').value.trim();
+    
+    if(!lpn || !vin || !plateBase64 || !regBase64) {
+      return alert("Please fill all fields and upload both images.");
+    }
+
+    const payload = {
+      customerInput: { State: state, LPN: lpn, VIN: vin },
+      plateImageBase64: plateBase64,
+      regDocImageBase64: regBase64
+    };
+
+    document.getElementById('submitBtn').style.display = 'none';
+    document.getElementById('loader').style.display = 'block';
+
+    try {
+      const res = await fetch('/Provisioner/api/v1/queue', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if(data.success) {
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('successMsg').style.display = 'block';
+      } else {
+        alert("Submission failed: " + data.error);
+        document.getElementById('submitBtn').style.display = 'block';
+        document.getElementById('loader').style.display = 'none';
+      }
+    } catch(e) {
+      alert("Submission error");
+      document.getElementById('submitBtn').style.display = 'block';
+      document.getElementById('loader').style.display = 'none';
+    }
+  });
+</script>
+</body>
+</html>

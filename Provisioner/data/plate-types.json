@@ -1,0 +1,236 @@
+{
+  "CA": {
+    "Standard Plates": [
+      "Standard Passenger Vehicle",
+      "Standard Commercial Vehicle",
+      "Standard Motorcycle",
+      "Standard Trailer",
+      "Standard Permanent Trailer",
+      "Standard Trailer Coach",
+      "Standard Park Trailer"
+    ],
+    "Special Interest Plates": [
+      "Arts Council",
+      "Breast Cancer Awareness",
+      "California 1960s Legacy",
+      "California Agriculture",
+      "California Museums",
+      "Collegiate",
+      "Environmental",
+      "Firefighters",
+      "Have A Heart, Be A Star, Help Our Kids",
+      "Lake Tahoe Conservancy",
+      "Memorial",
+      "Pet Lovers",
+      "Veterans' Organizations",
+      "Whale Tail",
+      "Yosemite Conservancy"
+    ],
+    "Special Recognition Plates": [
+      "Congressional Medal of Honor Recipient",
+      "Ex-Prisoner of War",
+      "Gold Star Family",
+      "Legion of Valor",
+      "Pearl Harbor Survivor",
+      "Purple Heart Recipient"
+    ],
+    "Special License Plates": [
+      "Amateur Radio Station",
+      "Antique Motorcycle",
+      "Bicentennial Bill of Rights",
+      "Citizens Band",
+      "Disabled Person",
+      "Disabled Veteran",
+      "Exempt",
+      "Foreign Organization",
+      "Historical Vehicle",
+      "Honorary Consul Corps",
+      "Horseless Carriage",
+      "Livery",
+      "Moped",
+      "Olympic Games 1984",
+      "Press Photographer",
+      "Special Equipment Identification"
+    ],
+    "Occupational Plates": [
+      "Dealer",
+      "Dismantler",
+      "Manufacturer",
+      "New Vehicle Distributor",
+      "Remanufacturer",
+      "Special Equipment Dealer and Manufacturer",
+      "Transporter"
+    ],
+    "Legislative Plates": [
+      "California State Assembly",
+      "California State Senate",
+      "United States House of Representatives",
+      "United States Senator"
+    ],
+    "Apportioned Plates": [
+      "Apportioned Power Unit",
+      "Prorate"
+    ],
+    "Year-of-Manufacture Plates": [
+      "Year-of-Manufacture",
+      "Legacy Black Plate (1963)",
+      "Legacy Yellow Plate (1956)"
+    ]
+  },
+  "AZ": {
+    "Standard Plates": [
+      "Standard Passenger Vehicle",
+      "Standard Commercial Vehicle",
+      "Standard Motorcycle",
+      "Standard Trailer",
+      "Standard Apportioned"
+    ],
+    "Non-Standard / Special Status Plates": [
+      "Alternative Fuel \u2014 Passenger",
+      "Alternative Fuel \u2014 Government",
+      "Amateur Radio Station",
+      "Classic Car",
+      "Congressional Medal of Honor Recipient",
+      "Deaf and Hard of Hearing",
+      "Disability",
+      "Former Prisoner of War",
+      "Historic Vehicle",
+      "Honorary Foreign Consul",
+      "Horseless Carriage",
+      "Manufacturer",
+      "Pearl Harbor Survivor",
+      "Street Rod",
+      "Transporter"
+    ],
+    "Specialty Plates \u2014 Military and Veterans": [
+      "Distinguished Flying Cross",
+      "Empower",
+      "Former Prisoner of War",
+      "Gold Star Family",
+      "Legion of Valor",
+      "Military Installation Support",
+      "Military Support / Scholarship",
+      "National Guard",
+      "Pearl Harbor Survivor",
+      "Purple Heart Medal Recipient",
+      "U.S. Army",
+      "Veteran",
+      "Veterans of Foreign Wars",
+      "Veterans of Foreign Wars Auxiliary",
+      "Women Veterans"
+    ],
+    "Specialty Plates \u2014 Public Safety and First Responders": [
+      "First Responder",
+      "Fraternal Order of Police",
+      "Honoring Fallen Police Officers",
+      "Professional Fire Fighters",
+      "Volunteer Firefighters"
+    ],
+    "Specialty Plates \u2014 Collegiate and Education": [
+      "All in for Arizona Schools",
+      "Collegiate \u2014 Arizona State University",
+      "Collegiate \u2014 Din\u00e9 College Warriors",
+      "Collegiate \u2014 Grand Canyon University",
+      "Collegiate \u2014 Midwestern University",
+      "Collegiate \u2014 Northern Arizona University",
+      "Collegiate \u2014 University of Arizona",
+      "Collegiate \u2014 University of Phoenix",
+      "Collegiate Football Bowl Game",
+      "Global Graduate Management",
+      "Health Sciences Education",
+      "Pima Community College"
+    ],
+    "Specialty Plates \u2014 Sports and Recreation": [
+      "Arizona Diamondbacks",
+      "Arizona Motorsports Commemorative",
+      "Arizona Professional Baseball Club",
+      "Arizona Professional Basketball Club",
+      "Arizona Professional Football Club",
+      "Arizona Professional Golf",
+      "Arizona Professional Hockey Club",
+      "Arizona Rodeo",
+      "Barrett-Jackson",
+      "Phoenix Mercury",
+      "Phoenix Rising FC",
+      "Special Olympics Arizona"
+    ],
+    "Specialty Plates \u2014 Environment, Wildlife, and Agriculture": [
+      "Agricultural Youth Organization",
+      "Arizona 4-H",
+      "Arizona Sportsmen for Wildlife Conservation",
+      "Energy Efficient Vehicle",
+      "Environmental",
+      "Farm",
+      "Keep Arizona Beautiful",
+      "Share the Road",
+      "Verde Valley Wine Trail"
+    ],
+    "Specialty Plates \u2014 Health and Human Services": [
+      "Alice Cooper's Solid Rock",
+      "Alzheimer's Disease Research",
+      "Autism Support",
+      "Boy Scouts of Arizona",
+      "Breast and Cervical Cancer",
+      "Cancer Support for Families",
+      "Child Abuse Prevention",
+      "Childhood Cancer Research",
+      "Congenital Heart Defect Awareness",
+      "Donate Life Arizona",
+      "Girl Scouts",
+      "Habitat for Humanity",
+      "Hunger Relief",
+      "In Loving Memory",
+      "Make-A-Wish Arizona",
+      "No One Fights Alone",
+      "Ovarian Cancer Awareness",
+      "Spaying and Neutering of Animals",
+      "Teen Lifeline",
+      "Teen Suicide Awareness",
+      "4AZ Kids"
+    ],
+    "Specialty Plates \u2014 Culture, Heritage, and Community": [
+      "Arizona 4-H",
+      "Arizona Agriculture",
+      "Arizona Centennial",
+      "Arizona Highways Magazine",
+      "Arizona Historical Society",
+      "Arizona Masonic Fraternity",
+      "Arizona Public Broadcast Television",
+      "Arizona Realtors Homes for All",
+      "Arizona Science Center",
+      "Arizona Youth Charities",
+      "Character Education",
+      "Choose Life",
+      "Gila River Indian Community",
+      "Golden Rule",
+      "Historic Route 66",
+      "Hualapai Tribe",
+      "In God We Trust",
+      "Navajo Nation",
+      "Rotary International",
+      "San Carlos Apache",
+      "State Forty Eight",
+      "Thunderbirds Charities",
+      "White Mountain Apache Tribe"
+    ]
+  },
+  "_variantMeta": {
+    "az_standard_1996_legacy": {
+      "state": "AZ",
+      "design_type": "Standard Passenger Vehicle",
+      "description": "Arizona 1996 Grand Canyon State legacy design \u2014 raised chrome bullet between digit and letter groups",
+      "systematic_separator": "bullet",
+      "systematic_separator_char": "\u2022",
+      "plate_pattern": "^(\\d+)([A-Z]+)$",
+      "note": "Bullet is a design-level separator on ALL plates of this series; not part of the assigned plate number"
+    },
+    "az_standard_current": {
+      "state": "AZ",
+      "design_type": "Standard Passenger Vehicle",
+      "description": "Arizona current screened standard design \u2014 no systematic separator",
+      "systematic_separator": null,
+      "plate_pattern": "^(\\d+)([A-Z]+)$",
+      "note": "Post-2008 redesign; no systematic separator between groups"
+    }
+  }
+}
